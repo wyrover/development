@@ -3,10 +3,17 @@ class CDevices
 {
 private:
     SP_CLASSIMAGELIST_DATA m_ImageListData;
+    BOOL m_bInitialized;
 
 public:
     CDevices(void);
     ~CDevices(void);
+
+    BOOL Initialize(
+        );
+
+    BOOL Uninitialize(
+        );
 
     BOOL GetDeviceTreeRoot(
         _Out_ PDEVINST DevInst
@@ -22,9 +29,6 @@ public:
         _Out_ PDEVINST DevInst
         );
 
-    HIMAGELIST GetImageList(
-        );
-
     BOOL EnumDeviceClasses(
         _In_ ULONG ClassIndex,
         _Out_ LPWSTR ClassName,
@@ -35,6 +39,8 @@ public:
         _Out_ LPBOOL IsUnknown,
         _Out_ LPBOOL IsHidden
         );
+
+    HIMAGELIST GetImageList() { return m_ImageListData.ImageList; }
 
 private:
     BOOL CreateImageList(

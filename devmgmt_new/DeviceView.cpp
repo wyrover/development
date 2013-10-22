@@ -13,7 +13,7 @@ CDeviceView::CDeviceView(HWND hMainWnd) :
 {
     m_Devices = new CDevices();
 
-    ZeroMemory(&m_ImageListData, sizeof(SP_CLASSIMAGELIST_DATA));
+    //ZeroMemory(&m_ImageListData, sizeof(SP_CLASSIMAGELIST_DATA));
 }
 
 
@@ -28,6 +28,9 @@ CDeviceView::Initialize()
 {
     HBITMAP hRootImage;
     BOOL bSuccess;
+
+    bSuccess = m_Devices->Initialize();
+    if (bSuccess == FALSE) return FALSE;
 
     /* Create the main treeview */
     m_hTreeView = CreateWindowExW(WS_EX_CLIENTEDGE,
@@ -44,10 +47,10 @@ CDeviceView::Initialize()
 
     (VOID)TreeView_DeleteAllItems(m_hTreeView);
 
-    bSuccess = m_Devices->GetImageList(&m_ImageList);
+    m_ImageList = m_Devices->GetImageList();
 
         (VOID)TreeView_SetImageList(m_hTreeView,
-                                    m_ImageListData.ImageList,
+                                    m_ImageList,
                                     TVSIL_NORMAL);
 
         TCHAR ComputerName[MAX_PATH];
@@ -58,20 +61,18 @@ CDeviceView::Initialize()
             ComputerName[0] = _T('\0');
         }
 
-        int RootImage = ImageList_GetImageCount(m_ImageListData.ImageList) - 1;
+        //int RootImage = ImageList_GetImageCount(m_ImageListData.ImageList) - 1;
 
         /* insert the root item into the tree */
-        m_hTreeRoot = InsertIntoTreeView(m_hTreeView,
-                                    NULL,
-                                    ComputerName,
-                                    NULL,
-                                    RootImage,
-                                    0);
-    }
+        //m_hTreeRoot = InsertIntoTreeView(m_hTreeView,
+        //                            NULL,
+        //                            ComputerName,
+        //                            NULL,
+        //                            RootImage,
+        //                            0);
+
 
     return !!(m_hTreeView);
-
-    return TRUE;
 }
 
 VOID
@@ -269,15 +270,15 @@ CDeviceView::EnumDeviceClasses(INT ClassIndex,
         lstrcpy(DevClassName, ClassName);
     }
 
-    if (!SetupDiGetClassImageIndex(&m_ImageListData,
-                                   &ClassGuid,
-                                   ClassImage))
-    {
-        /* FIXME: can we do this?
-         * Set the blank icon: IDI_SETUPAPI_BLANK = 41
-         * it'll be image 24 in the imagelist */
-        *ClassImage = 24;
-    }
+    //if (!SetupDiGetClassImageIndex(&m_ImageListData,
+    //                               &ClassGuid,
+    //                               ClassImage))
+    //{
+    //    /* FIXME: can we do this?
+    //     * Set the blank icon: IDI_SETUPAPI_BLANK = 41
+    //     * it'll be image 24 in the imagelist */
+    //    *ClassImage = 24;
+    //}
 
     /* Get device info for all devices of a particular class */
     hDevInfo = SetupDiGetClassDevs(*IsUnknown ? NULL : &ClassGuid,

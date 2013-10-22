@@ -2,7 +2,8 @@
 #include "devmgmt.h"
 #include "Devices.h"
 
-CDevices::CDevices(void)
+CDevices::CDevices(void) :
+    m_bInitialized(FALSE)
 {
     /* get the device image List */
     ZeroMemory(&m_ImageListData, sizeof(SP_CLASSIMAGELIST_DATA));
@@ -10,22 +11,34 @@ CDevices::CDevices(void)
 
 CDevices::~CDevices(void)
 {
-    if (m_ImageListData.ImageList != NULL)
-        SetupDiDestroyClassImageList(&m_ImageListData);
+    ATLASSERT(m_bInitialized == FALSE);
 }
 
-HIMAGELIST
-CDevices::GetImageList()
+BOOL
+CDevices::Initialize()
 {
-    if (m_ImageListData.ImageList != NULL)
-        return m_ImageListData.ImageList;
+    BOOL bSuccess;
 
-    if (CreateImageList())
+    ATLASSERT(m_bInitialized == FALSE);
+
+    bSuccess = CreateImageList();
+    if (bSuccess)
     {
-        return m_ImageListData.ImageList;
+        m_bInitialized = TRUE;
     }
 
-    return NULL;
+    return m_bInitialized;
+}
+
+BOOL
+CDevices::Uninitialize()
+{
+    if (m_ImageListData.ImageList != NULL)
+        SetupDiDestroyClassImageList(&m_ImageListData);
+
+    m_bInitialized = FALSE;
+
+    return TRUE;
 }
 
 BOOL
@@ -119,7 +132,7 @@ CDevices::EnumDeviceClasses(_In_ ULONG ClassIndex,
 
 
 
-    (VOID)SetupDiGetClassImageIndex(&GetImageList(),
+    (VOID)SetupDiGetClassImageIndex(&m_ImageListData,
                                     &ClassGuid,
                                     ClassImage);
 
