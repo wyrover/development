@@ -38,7 +38,7 @@ public:
         _Out_ PDEVINST DevInst
         );
 
-    BOOL EnumDeviceClasses(
+    BOOL EnumClasses(
         _In_ ULONG ClassIndex,
         _Out_ LPWSTR ClassName,
         _In_ DWORD ClassNameSize,
@@ -49,7 +49,7 @@ public:
         _Out_ LPBOOL IsHidden
         );
 
-    BOOL EnumChildDevices(
+    BOOL EnumClassDevices(
         _In_ ULONG ClassIndex,
         _In_ DWORD MemberIndex,
         _Out_ LPBOOL HasChild,
@@ -57,6 +57,13 @@ public:
         _In_ DWORD DeviceNameSize,
         _Out_ LPTSTR *DeviceID
         );
+
+    BOOL GetDeviceStatus(
+        _In_ LPWSTR DeviceId,
+        _Out_ PULONG pulStatus,
+        _Out_ PULONG pulProblemNumber
+        );
+  
 
     HIMAGELIST GetImageList() { return m_ImageListData.ImageList; }
 

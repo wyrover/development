@@ -114,6 +114,8 @@ unsigned int __stdcall CDeviceView::ListDevicesThread(void *Param)
 {
     CDeviceView *This = (CDeviceView *)Param;
 
+    (VOID)TreeView_DeleteAllItems(This->m_hTreeView);
+
     switch (This->m_ListDevices)
     {
     case DevicesByType:
@@ -138,127 +140,114 @@ BOOL
 CDeviceView::ListDevicesByType()
 {
     HTREEITEM hDevItem = NULL;
-    TCHAR DevName[256];
-    TCHAR DevDesc[256];
-    LPTSTR DeviceID = NULL;
-    BOOL DevExist = FALSE;
-    INT ClassRet;
-    INT index = 0;
-    INT DevImage;
+    WCHAR ClassName[256];
+    WCHAR ClassDescription[256];
+    INT ClassIndex;
+    INT ClassImage;
+    LPTSTR DeviceId = NULL;
+    
     BOOL IsUnknown = FALSE;
     BOOL IsHidden = FALSE;
-
     BOOL bSuccess;
 
-    m_Devices->GetDeviceTreeRoot(DevName, 256, &DevImage);
+    /* Get the details of the root of the device tree */
+    bSuccess = m_Devices->GetDeviceTreeRoot(ClassName, 256, &ClassImage);
+    if (bSuccess)
+    {
+        /* Add the root of the device tree to the treeview */
+        m_hTreeRoot = InsertIntoTreeView(NULL,
+                                         ClassName,
+                                         NULL,
+                                         ClassImage,
+                                         0);
+    }
 
-    m_hTreeRoot = InsertIntoTreeView(m_hTreeView,
-                                     NULL,
-                                     DevName,
-                                     NULL,
-                                     DevImage,
-                                     0);
+    /* If something went wrong, bail */
+    if (m_hTreeView == NULL) return FALSE;
 
-
+    ClassIndex = 0;
     do
     {
-        bSuccess = m_Devices->EnumDeviceClasses(index,
-                                                DevName,
-                                                256,
-                                                DevDesc,
-                                                256,
-                                                &DevImage,
-                                                &IsUnknown,
-                                                &IsHidden);
-
-        //ClassRet = EnumDeviceClasses(index,
-        //                             TRUE,
-        //                             DevName,
-        //                             DevDesc,
-        //                             &DevExist,
-        //                             &DevImage,
-        //                             &IsUnknown,
-        //                             &IsHidden);
-
+        /* Get the next device class */
+        bSuccess = m_Devices->EnumClasses(ClassIndex,
+                                          ClassName,
+                                          256,
+                                          ClassDescription,
+                                          256,
+                                          &ClassImage,
+                                          &IsUnknown,
+                                          &IsHidden);
         if (bSuccess)
         {
-            TCHAR DeviceName[256];
-            INT DevIndex = 0;
+            WCHAR DeviceName[256];
+            INT DeviceIndex = 0;
             BOOL HasChild = FALSE;
+            BOOL DeviceHasProblem = FALSE;
+            ULONG DeviceStatus, ProblemNumber;
 
-            if (DevDesc[0] != _T('\0'))
-            {
-                hDevItem = InsertIntoTreeView(m_hTreeView,
-                                              m_hTreeRoot,
-                                              DevDesc,
-                                              NULL,
-                                              DevImage,
-                                              0);
-            }
-            else
-            {
-                hDevItem = InsertIntoTreeView(m_hTreeView,
-                                              m_hTreeRoot,
-                                              DevName,
-                                              NULL,
-                                              DevImage,
-                                              0);
-            }
+            /* Insert the new class under the root item */
+            hDevItem = InsertIntoTreeView(m_hTreeRoot,
+                                          ClassDescription,
+                                          NULL,
+                                          ClassImage,
+                                          0);
 
             do
             {
-                //Ret = EnumDevices(DevIndex,
-                //                  IsUnknown ? NULL : DevName,
-                //                  DeviceName,
-                //                  &DeviceID);
-                //bSuccess = m_Devices->EnumChildDevices(DevIndex,
-                //                                       &HasChild,
-                //                                       DeviceName,
-                //                                       256,
-                //                                       &DeviceID);
-
-                if (m_Devices->EnumChildDevices(index,
-                                                DevIndex,
-                                                       &HasChild,
-                                                       DeviceName,
-                                                       256,
-                                                       &DeviceID))
+                /* Get the next device in this class */
+                if (m_Devices->EnumClassDevices(ClassIndex,
+                                                DeviceIndex,
+                                                &HasChild,
+                                                DeviceName,
+                                                256,
+                                                &DeviceId))
                 {
-                    InsertIntoTreeView(m_hTreeView,
-                                       hDevItem,
-                                       DeviceName,
-                                       DeviceID,
-                                       DevImage,
-                                       0);
-                    //if (Ret != 0)
+                    /* Get the status of the device */
+                    if (m_Devices->GetDeviceStatus(DeviceId,
+                                                   &DeviceStatus,
+                                                   &ProblemNumber))
                     {
-                        /* Expand the class if the device has a problem */
+                        /* Check if the device has a problem */
+                       DeviceHasProblem = (DeviceStatus & DN_HAS_PROBLEM);
+                    }
+
+                    /* Add the device under the class item */
+                    (VOID)InsertIntoTreeView(hDevItem,
+                                             DeviceName,
+                                             (LPARAM)DeviceId,
+                                             ClassImage,
+                                             ProblemNumber);
+
+                    /* Check if there's a problem with the device */
+                    if (DeviceHasProblem)
+                    {
+                        /* Expand the class */
                         (void)TreeView_Expand(m_hTreeView,
                                               hDevItem,
                                               TVE_EXPAND);
                     }
                 }
 
-                DevIndex++;
+                DeviceIndex++;
 
             } while (HasChild);
 
-            ///* don't insert classes with no devices */
-            //if (!TreeView_GetChild(m_hTreeView,
-            //                       hDevItem))
-            //{
-            //    (void)TreeView_DeleteItem(m_hTreeView,
-            //                              hDevItem);
-            //}
-            //else
-            //{
-            //    (void)TreeView_SortChildren(m_hTreeView,
-            //                                hDevItem,
-            //                                0);
-            //}
+            /* don't insert classes with no devices */
+            if (!TreeView_GetChild(m_hTreeView,
+                                   hDevItem))
+            {
+                (void)TreeView_DeleteItem(m_hTreeView,
+                                          hDevItem);
+            }
+            else
+            {
+                (void)TreeView_SortChildren(m_hTreeView,
+                                            hDevItem,
+                                            0);
+            }
         }
 
-        index++;
+        ClassIndex++;
 
     } while (bSuccess);
 
@@ -312,12 +301,11 @@ CDeviceView::ListDevicesByConnection()
 }
 
  HTREEITEM
-CDeviceView::InsertIntoTreeView(HWND hTreeView,
-                   HTREEITEM hRoot,
-                   LPTSTR lpLabel,
-                   LPTSTR DeviceID,
-                   INT DevImage,
-                   LONG DevProb)
+CDeviceView::InsertIntoTreeView(HTREEITEM hParent,
+                                LPTSTR lpLabel,
+                                LPARAM lParam,
+                                INT DevImage,
+                                LONG DevProb)
 {
     TV_ITEM tvi;
     TV_INSERTSTRUCT tvins;
@@ -327,14 +315,15 @@ CDeviceView::InsertIntoTreeView(HWND hTreeView,
 
     tvi.mask = TVIF_TEXT | TVIF_PARAM | TVIF_IMAGE | TVIF_SELECTEDIMAGE;
     tvi.pszText = lpLabel;
-    tvi.cchTextMax = lstrlen(lpLabel);
-    tvi.lParam = (LPARAM)DeviceID;
+    tvi.cchTextMax = wcslen(lpLabel);
+    tvi.lParam = lParam;
     tvi.iImage = DevImage;
     tvi.iSelectedImage = DevImage;
 
     if (DevProb != 0)
     {
         tvi.stateMask = TVIS_OVERLAYMASK;
+        tvi.state = INDEXTOOVERLAYMASK(72);
 
         if (DevProb == CM_PROB_DISABLED)
         {
@@ -344,9 +333,9 @@ CDeviceView::InsertIntoTreeView(HWND hTreeView,
     }
 
     tvins.item = tvi;
-    tvins.hParent = hRoot;
+    tvins.hParent = hParent;
 
-    return TreeView_InsertItem(hTreeView, &tvins);
+    return TreeView_InsertItem(m_hTreeView, &tvins);
 }
 #if 0
 HDEVINFO hDevInfo;

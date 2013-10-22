@@ -56,7 +56,7 @@ CDevices::GetDeviceTreeRoot(_Out_ LPWSTR RootName,
     wcscpy_s(RootName, RootNameSize, m_RootName);
     *RootImageIndex = m_RootImageIndex;
 
-    return FALSE;
+    return TRUE;
 }
 
 BOOL
@@ -84,14 +84,44 @@ CDevices::GetSiblingDevice(_In_ DEVINST PrevDevice,
 }
 
 BOOL
-CDevices::EnumDeviceClasses(_In_ ULONG ClassIndex,
-                            _Out_ LPWSTR ClassName,
-                            _In_ DWORD ClassNameSize,
-                            _Out_ LPWSTR ClassDesc,
-                            _In_ DWORD ClassDescSize,
-                            _Out_ PINT ClassImage,
-                            _Out_ LPBOOL IsUnknown,
-                            _Out_ LPBOOL IsHidden)
+CDevices::GetDeviceStatus(_In_ LPWSTR DeviceId,
+                          _Out_ PULONG Status,
+                          _Out_ PULONG ProblemNumber)
+{
+    DEVINST DeviceInstance;
+    CONFIGRET cr;
+
+    *Status = 0;
+    *ProblemNumber = 0;
+
+    cr = CM_Locate_DevNodeW(&DeviceInstance,
+                            DeviceId,
+                            CM_LOCATE_DEVNODE_NORMAL);
+    if (cr == CR_SUCCESS)
+    {
+        cr = CM_Get_DevNode_Status_Ex(Status,
+                                      ProblemNumber,
+                                      DeviceInstance,
+                                      0,
+                                      NULL);
+        if (cr == CR_SUCCESS)
+        {
+            return TRUE;;
+        }
+    }
+
+    return FALSE;
+}
+
+BOOL
+CDevices::EnumClasses(_In_ ULONG ClassIndex,
+                      _Out_ LPWSTR ClassName,
+                      _In_ DWORD ClassNameSize,
+                      _Out_ LPWSTR ClassDesc,
+                      _In_ DWORD ClassDescSize,
+                      _Out_ PINT ClassImage,
+                      _Out_ LPBOOL IsUnknown,
+                      _Out_ LPBOOL IsHidden)
 {
     DWORD RequiredSize;
     GUID ClassGuid;
@@ -129,12 +159,15 @@ CDevices::EnumDeviceClasses(_In_ ULONG ClassIndex,
         DWORD Type = REG_SZ;
         DWORD Size = ClassDescSize;
 
-        (VOID)RegQueryValueExW(hKey,
-                               NULL,
+        if (RegQueryValueExW(hKey,
+                               L"ClassDesc",
                                NULL,
                                &Type,
                                (LPBYTE)ClassDesc,
-                               &Size);
+                               &Size) != ERROR_SUCCESS)
+        {
+            wcscpy_s(ClassDesc, ClassDescSize, ClassName);
+        }
     }
 
     RegCloseKey(hKey);
@@ -156,7 +189,7 @@ CDevices::EnumDeviceClasses(_In_ ULONG ClassIndex,
 
 
 BOOL
-CDevices::EnumChildDevices(
+CDevices::EnumClassDevices(
         _In_ ULONG ClassIndex,
         _In_ DWORD MemberIndex,
         _Out_ LPBOOL HasChild,
@@ -166,7 +199,6 @@ CDevices::EnumChildDevices(
 {
     SP_DEVINFO_DATA DeviceInfoData;
     CONFIGRET cr;
-    ULONG Status, ProblemNumber;
     DWORD DevIdSize;
 
     HDEVINFO hDevInfo = NULL;
@@ -276,16 +308,6 @@ CDevices::EnumChildDevices(
                                          (BYTE*)DeviceName,
                                          256,
                                          NULL);
-    }
-
-    cr = CM_Get_DevNode_Status_Ex(&Status,
-                                  &ProblemNumber,
-                                  DeviceInfoData.DevInst,
-                                  0,
-                                  NULL);
-    if (cr == CR_SUCCESS && (Status & DN_HAS_PROBLEM))
-    {
-        return FALSE;;
     }
 
     return TRUE;
