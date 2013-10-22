@@ -3,10 +3,12 @@
 #include "Devices.h"
 
 CDevices::CDevices(void) :
-    m_bInitialized(FALSE)
+    m_bInitialized(FALSE),
+    m_RootImageIndex(-1)
 {
-    /* get the device image List */
     ZeroMemory(&m_ImageListData, sizeof(SP_CLASSIMAGELIST_DATA));
+
+    m_RootName[0] = UNICODE_NULL;
 }
 
 CDevices::~CDevices(void)
@@ -21,11 +23,13 @@ CDevices::Initialize()
 
     ATLASSERT(m_bInitialized == FALSE);
 
-    bSuccess = CreateImageList();
-    if (bSuccess)
-    {
-        m_bInitialized = TRUE;
-    }
+    /* Get the device image list */
+    m_ImageListData.cbSize = sizeof(SP_CLASSIMAGELIST_DATA);
+    bSuccess = SetupDiGetClassImageList(&m_ImageListData);
+    if (bSuccess == FALSE) return FALSE;
+
+    bSuccess = CreateRootDevice();
+    if (bSuccess) m_bInitialized = TRUE;
 
     return m_bInitialized;
 }
@@ -34,7 +38,10 @@ BOOL
 CDevices::Uninitialize()
 {
     if (m_ImageListData.ImageList != NULL)
+    {
         SetupDiDestroyClassImageList(&m_ImageListData);
+        ZeroMemory(&m_ImageListData, sizeof(SP_CLASSIMAGELIST_DATA));
+    }
 
     m_bInitialized = FALSE;
 
@@ -42,14 +49,14 @@ CDevices::Uninitialize()
 }
 
 BOOL
-CDevices::GetDeviceTreeRoot(_Out_ PDEVINST DevInst)
+CDevices::GetDeviceTreeRoot(_Out_ LPWSTR RootName,
+                            _In_ DWORD RootNameSize,
+                            _Out_ PINT RootImageIndex)
 {
-    CONFIGRET cr;
+    wcscpy_s(RootName, RootNameSize, m_RootName);
+    *RootImageIndex = m_RootImageIndex;
 
-    cr = CM_Locate_DevNodeW(DevInst,
-                            NULL,
-                            CM_LOCATE_DEVNODE_NORMAL);
-    return (cr == CR_SUCCESS);
+    return FALSE;
 }
 
 BOOL
@@ -130,7 +137,7 @@ CDevices::EnumDeviceClasses(_In_ ULONG ClassIndex,
                                &Size);
     }
 
-
+    RegCloseKey(hKey);
 
     (VOID)SetupDiGetClassImageIndex(&m_ImageListData,
                                     &ClassGuid,
@@ -148,31 +155,184 @@ CDevices::EnumDeviceClasses(_In_ ULONG ClassIndex,
 }
 
 
+BOOL
+CDevices::EnumChildDevices(
+        _In_ ULONG ClassIndex,
+        _In_ DWORD MemberIndex,
+        _Out_ LPBOOL HasChild,
+        _Out_ LPTSTR DeviceName,
+        _In_ DWORD DeviceNameSize,
+        _Out_ LPTSTR *DeviceID)
+{
+    SP_DEVINFO_DATA DeviceInfoData;
+    CONFIGRET cr;
+    ULONG Status, ProblemNumber;
+    DWORD DevIdSize;
+
+    HDEVINFO hDevInfo = NULL;
+    BOOL IsUnknown;
+
+    *HasChild = FALSE;
+    *DeviceName = _T('\0');
+    *DeviceID = NULL;
+
+
+    GUID ClassGuid;
+    cr = CM_Enumerate_Classes(ClassIndex,
+                              &ClassGuid,
+                              0);
+    if (cr != CR_SUCCESS)
+        return FALSE;
+
+    IsUnknown = IsEqualGUID(ClassGuid, GUID_DEVCLASS_UNKNOWN);
+
+    /* Get device info for all devices of a particular class */
+    hDevInfo = SetupDiGetClassDevsW(IsUnknown ? NULL : &ClassGuid,
+                                    NULL,
+                                    NULL,
+                                    DIGCF_PRESENT | (IsUnknown ? DIGCF_ALLCLASSES : 0));
+    if (hDevInfo == INVALID_HANDLE_VALUE)
+    {
+        return FALSE;
+    }
+
+
+    ZeroMemory(&DeviceInfoData, sizeof(SP_DEVINFO_DATA));
+    DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+    if (!SetupDiEnumDeviceInfo(hDevInfo,
+                               MemberIndex,
+                               &DeviceInfoData))
+    {
+        //if (GetLastError() == ERROR_NO_MORE_ITEMS)
+        //{
+        //    return TRUE;
+        //}
+        //else
+            return FALSE;
+    }
+
+    //if (!IsEqualGUID(DeviceInfoData.ClassGuid, GUID_NULL))
+    //{
+    //    /* we're looking for unknown devices and this isn't one */
+    //    return FALSE;
+    //}
+
+    *HasChild = TRUE;
+
+    /* get the device ID */
+    if (!SetupDiGetDeviceInstanceId(hDevInfo,
+                                    &DeviceInfoData,
+                                    NULL,
+                                    0,
+                                    &DevIdSize))
+    {
+        if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+        {
+            (*DeviceID) = (LPTSTR)HeapAlloc(GetProcessHeap(),
+                                            0,
+                                            DevIdSize * sizeof(TCHAR));
+            if (*DeviceID)
+            {
+                if (!SetupDiGetDeviceInstanceId(hDevInfo,
+                                                &DeviceInfoData,
+                                                *DeviceID,
+                                                DevIdSize,
+                                                NULL))
+                {
+                    HeapFree(GetProcessHeap(),
+                             0,
+                             *DeviceID);
+                    *DeviceID = NULL;
+                }
+            }
+        }
+    }
+
+    if (DeviceID != NULL &&
+        _tcscmp(*DeviceID, _T("HTREE\\ROOT\\0")) == 0)
+    {
+        HeapFree(GetProcessHeap(),
+                 0,
+                 *DeviceID);
+        *DeviceID = NULL;
+        return FALSE;
+    }
+
+    /* get the device's friendly name */
+    if (!SetupDiGetDeviceRegistryProperty(hDevInfo,
+                                          &DeviceInfoData,
+                                          SPDRP_FRIENDLYNAME,
+                                          0,
+                                          (BYTE*)DeviceName,
+                                          256,
+                                          NULL))
+    {
+        /* if the friendly name fails, try the description instead */
+        SetupDiGetDeviceRegistryProperty(hDevInfo,
+                                         &DeviceInfoData,
+                                         SPDRP_DEVICEDESC,
+                                         0,
+                                         (BYTE*)DeviceName,
+                                         256,
+                                         NULL);
+    }
+
+    cr = CM_Get_DevNode_Status_Ex(&Status,
+                                  &ProblemNumber,
+                                  DeviceInfoData.DevInst,
+                                  0,
+                                  NULL);
+    if (cr == CR_SUCCESS && (Status & DN_HAS_PROBLEM))
+    {
+        return FALSE;;
+    }
+
+    return TRUE;
+}
+
 
 /* PRIVATE METHODS ******************************************/
 
+
 BOOL
-CDevices::CreateImageList()
+CDevices::CreateRootDevice()
 {
-    HBITMAP hRootImage;
-    BOOL bSuccess;
+    HBITMAP hRootImage = NULL;
+    DWORD Size = ROOT_NAME_SIZE;
+    BOOL bSuccess = FALSE;
+    CONFIGRET cr;
 
-    if (m_ImageListData.ImageList != NULL)
-        return TRUE;
+    /* The root name is the computer name */
+    (VOID)GetComputerNameW(m_RootName, &Size);
 
-    m_ImageListData.cbSize = sizeof(SP_CLASSIMAGELIST_DATA);
-    bSuccess = SetupDiGetClassImageList(&m_ImageListData);
-    if (bSuccess == FALSE) return FALSE;
-
+    /* Load the bitmap we'll be using as the root image */
     hRootImage = LoadBitmapW(g_hInstance,
                              MAKEINTRESOURCEW(IDB_ROOT_IMAGE));
-    if (hRootImage == NULL) return FALSE;
+    if (hRootImage == NULL) goto Cleanup;
 
-    ImageList_Add(m_ImageListData.ImageList,
-                  hRootImage,
-                  NULL);
+    /* Add this bitmap to the device image list. This is a bit hacky, but it's safe */
+    m_RootImageIndex = ImageList_Add(m_ImageListData.ImageList,
+                                    hRootImage,
+                                    NULL);
+    if (m_RootImageIndex == -1)
+        goto Cleanup;
 
-    DeleteObject(hRootImage);
+    /* Get the root instance */
+    cr = CM_Locate_DevNodeW(&m_RootDevInst,
+                            NULL,
+                            CM_LOCATE_DEVNODE_NORMAL);
+    if (cr == CR_SUCCESS)
+        bSuccess = TRUE;
+
+Cleanup:
+    if (bSuccess == FALSE)
+    {
+        SetupDiDestroyClassImageList(&m_ImageListData);
+        ZeroMemory(&m_ImageListData, sizeof(SP_CLASSIMAGELIST_DATA));
+    }
+
+    if (hRootImage) DeleteObject(hRootImage);
 
     return bSuccess;
 }

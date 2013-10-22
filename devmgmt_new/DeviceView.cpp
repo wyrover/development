@@ -3,17 +3,17 @@
 #include "DeviceView.h"
 
 
+/* PUBLIC METHODS *************************************/
+
 CDeviceView::CDeviceView(HWND hMainWnd) :
     m_Devices(NULL),
     m_hMainWnd(hMainWnd),
     m_hTreeView(NULL),
     m_hPropertyDialog(NULL),
     m_hShortcutMenu(NULL),
-    m_ListDevices(ByType)
+    m_ListDevices(DevicesByType)
 {
     m_Devices = new CDevices();
-
-    //ZeroMemory(&m_ImageListData, sizeof(SP_CLASSIMAGELIST_DATA));
 }
 
 
@@ -26,9 +26,9 @@ CDeviceView::~CDeviceView(void)
 BOOL
 CDeviceView::Initialize()
 {
-    HBITMAP hRootImage;
     BOOL bSuccess;
 
+    /* Initialize the devices class */
     bSuccess = m_Devices->Initialize();
     if (bSuccess == FALSE) return FALSE;
 
@@ -43,36 +43,26 @@ CDeviceView::Initialize()
                                   (HMENU)IDC_TREEVIEW,
                                   g_hInstance,
                                   NULL);
-    if (m_hTreeView == NULL) return FALSE;
+    if (m_hTreeView)
+    {
+        /* Get the devices image list */
+        m_ImageList = m_Devices->GetImageList();
 
-    (VOID)TreeView_DeleteAllItems(m_hTreeView);
-
-    m_ImageList = m_Devices->GetImageList();
-
+        /* Set the image list against the treeview */
         (VOID)TreeView_SetImageList(m_hTreeView,
                                     m_ImageList,
                                     TVSIL_NORMAL);
-
-        TCHAR ComputerName[MAX_PATH];
-        DWORD dwSize;
-        if (!GetComputerNameW(ComputerName,
-                        &dwSize))
-        {
-            ComputerName[0] = _T('\0');
-        }
-
-        //int RootImage = ImageList_GetImageCount(m_ImageListData.ImageList) - 1;
-
-        /* insert the root item into the tree */
-        //m_hTreeRoot = InsertIntoTreeView(m_hTreeView,
-        //                            NULL,
-        //                            ComputerName,
-        //                            NULL,
-        //                            RootImage,
-        //                            0);
-
+    }
 
     return !!(m_hTreeView);
+}
+
+BOOL
+CDeviceView::Uninitialize()
+{
+    (VOID)m_Devices->Uninitialize();
+
+    return TRUE;
 }
 
 VOID
@@ -91,11 +81,6 @@ CDeviceView::Size(INT x,
                  SWP_NOZORDER);
 }
 
-BOOL
-CDeviceView::Uninitialize()
-{
-    return TRUE;
-}
 
 VOID
 CDeviceView::Refresh()
@@ -122,34 +107,184 @@ CDeviceView::SetFocus()
 {
 }
 
+
+/* PRIVATE METHODS ********************************************/
+
 unsigned int __stdcall CDeviceView::ListDevicesThread(void *Param)
 {
     CDeviceView *This = (CDeviceView *)Param;
 
     switch (This->m_ListDevices)
     {
-    case ByType:
+    case DevicesByType:
         (VOID)This->ListDevicesByType();
         break;
 
-    case ByConnection:
+    case DevicesByConnection:
         (VOID)This->ListDevicesByConnection();
+        break;
+
+    case ResourcesByType:
+        break;
+
+    case ResourcesByConnection:
         break;
     }
     return 0;
 }
 
 
-/* PRIVATE METHODS ********************************************/
+BOOL
+CDeviceView::ListDevicesByType()
+{
+    HTREEITEM hDevItem = NULL;
+    TCHAR DevName[256];
+    TCHAR DevDesc[256];
+    LPTSTR DeviceID = NULL;
+    BOOL DevExist = FALSE;
+    INT ClassRet;
+    INT index = 0;
+    INT DevImage;
+    BOOL IsUnknown = FALSE;
+    BOOL IsHidden = FALSE;
+
+    BOOL bSuccess;
+
+    m_Devices->GetDeviceTreeRoot(DevName, 256, &DevImage);
+
+    m_hTreeRoot = InsertIntoTreeView(m_hTreeView,
+                                     NULL,
+                                     DevName,
+                                     NULL,
+                                     DevImage,
+                                     0);
+
+
+    do
+    {
+        bSuccess = m_Devices->EnumDeviceClasses(index,
+                                                DevName,
+                                                256,
+                                                DevDesc,
+                                                256,
+                                                &DevImage,
+                                                &IsUnknown,
+                                                &IsHidden);
+
+        //ClassRet = EnumDeviceClasses(index,
+        //                             TRUE,
+        //                             DevName,
+        //                             DevDesc,
+        //                             &DevExist,
+        //                             &DevImage,
+        //                             &IsUnknown,
+        //                             &IsHidden);
+
+        if (bSuccess)
+        {
+            TCHAR DeviceName[256];
+            INT DevIndex = 0;
+            BOOL HasChild = FALSE;
+
+            if (DevDesc[0] != _T('\0'))
+            {
+                hDevItem = InsertIntoTreeView(m_hTreeView,
+                                              m_hTreeRoot,
+                                              DevDesc,
+                                              NULL,
+                                              DevImage,
+                                              0);
+            }
+            else
+            {
+                hDevItem = InsertIntoTreeView(m_hTreeView,
+                                              m_hTreeRoot,
+                                              DevName,
+                                              NULL,
+                                              DevImage,
+                                              0);
+            }
+
+            do
+            {
+                //Ret = EnumDevices(DevIndex,
+                //                  IsUnknown ? NULL : DevName,
+                //                  DeviceName,
+                //                  &DeviceID);
+                //bSuccess = m_Devices->EnumChildDevices(DevIndex,
+                //                                       &HasChild,
+                //                                       DeviceName,
+                //                                       256,
+                //                                       &DeviceID);
+
+                if (m_Devices->EnumChildDevices(index,
+                                                DevIndex,
+                                                       &HasChild,
+                                                       DeviceName,
+                                                       256,
+                                                       &DeviceID))
+                {
+                    InsertIntoTreeView(m_hTreeView,
+                                       hDevItem,
+                                       DeviceName,
+                                       DeviceID,
+                                       DevImage,
+                                       0);
+                    //if (Ret != 0)
+                    {
+                        /* Expand the class if the device has a problem */
+                        (void)TreeView_Expand(m_hTreeView,
+                                              hDevItem,
+                                              TVE_EXPAND);
+                    }
+                }
+
+                DevIndex++;
+
+            } while (HasChild);
+
+            ///* don't insert classes with no devices */
+            //if (!TreeView_GetChild(m_hTreeView,
+            //                       hDevItem))
+            //{
+            //    (void)TreeView_DeleteItem(m_hTreeView,
+            //                              hDevItem);
+            //}
+            //else
+            //{
+            //    (void)TreeView_SortChildren(m_hTreeView,
+            //                                hDevItem,
+            //                                0);
+            //}
+        }
+
+        index++;
+
+    } while (bSuccess);
+
+    (void)TreeView_Expand(m_hTreeView,
+                          m_hTreeRoot,
+                          TVE_EXPAND);
+
+    (void)TreeView_SortChildren(m_hTreeView,
+                                m_hTreeRoot,
+                                0);
+
+    (void)TreeView_SelectItem(m_hTreeView,
+                              m_hTreeRoot);
+
+    return 0;
+}
+
 BOOL
 CDeviceView::ListDevicesByConnection()
 {
-    DEVINST RootDevInst;
-    DEVINST DevInst;
+    return FALSE;
+    //DEVINST RootDevInst;
 
-    if (!m_Devices->GetDeviceTreeRoot(&RootDevInst))
-        return FALSE;
-
+    //if (!m_Devices->GetDeviceTreeRoot(&RootDevInst))
+    //    return FALSE;
+    
     ////AddDeviceToTree(NULL, NULL, RootDevInst, TRUE);
 
     ///* Get the first child */
@@ -213,7 +348,7 @@ CDeviceView::InsertIntoTreeView(HWND hTreeView,
 
     return TreeView_InsertItem(hTreeView, &tvins);
 }
-
+#if 0
 HDEVINFO hDevInfo;
  INT
 CDeviceView::EnumDeviceClasses(INT ClassIndex,
@@ -319,224 +454,4 @@ CDeviceView::EnumDeviceClasses(INT ClassIndex,
 
     return 0;
 }
-
-                  
- LONG
-CDeviceView::EnumDevices(INT index,
-            LPTSTR DeviceClassName,
-            LPTSTR DeviceName,
-            LPTSTR *DeviceID)
-{
-    SP_DEVINFO_DATA DeviceInfoData;
-    CONFIGRET cr;
-    ULONG Status, ProblemNumber;
-    DWORD DevIdSize;
-
-    *DeviceName = _T('\0');
-    *DeviceID = NULL;
-
-    ZeroMemory(&DeviceInfoData, sizeof(SP_DEVINFO_DATA));
-    DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
-
-    if (!SetupDiEnumDeviceInfo(hDevInfo,
-                               index,
-                               &DeviceInfoData))
-    {
-        /* no such device */
-        return -1;
-    }
-
-    if (DeviceClassName == NULL && !IsEqualGUID(DeviceInfoData.ClassGuid, GUID_NULL))
-    {
-        /* we're looking for unknown devices and this isn't one */
-        return -2;
-    }
-
-    /* get the device ID */
-    if (!SetupDiGetDeviceInstanceId(hDevInfo,
-                                    &DeviceInfoData,
-                                    NULL,
-                                    0,
-                                    &DevIdSize))
-    {
-        if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
-        {
-            (*DeviceID) = (LPTSTR)HeapAlloc(GetProcessHeap(),
-                                            0,
-                                            DevIdSize * sizeof(TCHAR));
-            if (*DeviceID)
-            {
-                if (!SetupDiGetDeviceInstanceId(hDevInfo,
-                                                &DeviceInfoData,
-                                                *DeviceID,
-                                                DevIdSize,
-                                                NULL))
-                {
-                    HeapFree(GetProcessHeap(),
-                             0,
-                             *DeviceID);
-                    *DeviceID = NULL;
-                }
-            }
-        }
-    }
-
-    if (DeviceID != NULL &&
-        _tcscmp(*DeviceID, _T("HTREE\\ROOT\\0")) == 0)
-    {
-        HeapFree(GetProcessHeap(),
-                 0,
-                 *DeviceID);
-        *DeviceID = NULL;
-        return -1;
-    }
-
-    /* get the device's friendly name */
-    if (!SetupDiGetDeviceRegistryProperty(hDevInfo,
-                                          &DeviceInfoData,
-                                          SPDRP_FRIENDLYNAME,
-                                          0,
-                                          (BYTE*)DeviceName,
-                                          256,
-                                          NULL))
-    {
-        /* if the friendly name fails, try the description instead */
-        SetupDiGetDeviceRegistryProperty(hDevInfo,
-                                         &DeviceInfoData,
-                                         SPDRP_DEVICEDESC,
-                                         0,
-                                         (BYTE*)DeviceName,
-                                         256,
-                                         NULL);
-    }
-
-    cr = CM_Get_DevNode_Status_Ex(&Status,
-                                  &ProblemNumber,
-                                  DeviceInfoData.DevInst,
-                                  0,
-                                  NULL);
-    if (cr == CR_SUCCESS && (Status & DN_HAS_PROBLEM))
-    {
-        return ProblemNumber;
-    }
-
-    return 0;
-}
-
-
-BOOL
-CDeviceView::ListDevicesByType()
-{
-    HTREEITEM hDevItem = NULL;
-    TCHAR DevName[256];
-    TCHAR DevDesc[256];
-    LPTSTR DeviceID = NULL;
-    BOOL DevExist = FALSE;
-    INT ClassRet;
-    INT index = 0;
-    INT DevImage;
-    BOOL IsUnknown = FALSE;
-    BOOL IsHidden = FALSE;
-
-    do
-    {
-        ClassRet = EnumDeviceClasses(index,
-                                     TRUE,
-                                     DevName,
-                                     DevDesc,
-                                     &DevExist,
-                                     &DevImage,
-                                     &IsUnknown,
-                                     &IsHidden);
-
-        if ((ClassRet != -1) && (DevExist) && !IsHidden)
-        {
-            TCHAR DeviceName[256];
-            INT DevIndex = 0;
-            LONG Ret;
-
-            if (DevDesc[0] != _T('\0'))
-            {
-                hDevItem = InsertIntoTreeView(m_hTreeView,
-                                              m_hTreeRoot,
-                                              DevDesc,
-                                              NULL,
-                                              DevImage,
-                                              0);
-            }
-            else
-            {
-                hDevItem = InsertIntoTreeView(m_hTreeView,
-                                              m_hTreeRoot,
-                                              DevName,
-                                              NULL,
-                                              DevImage,
-                                              0);
-            }
-
-            do
-            {
-                Ret = EnumDevices(DevIndex,
-                                  IsUnknown ? NULL : DevName,
-                                  DeviceName,
-                                  &DeviceID);
-                if (Ret >= 0)
-                {
-                    InsertIntoTreeView(m_hTreeView,
-                                       hDevItem,
-                                       DeviceName,
-                                       DeviceID,
-                                       DevImage,
-                                       Ret);
-                    if (Ret != 0)
-                    {
-                        /* Expand the class if the device has a problem */
-                        (void)TreeView_Expand(m_hTreeView,
-                                              hDevItem,
-                                              TVE_EXPAND);
-                    }
-                }
-
-                DevIndex++;
-
-            } while (Ret != -1);
-
-            /* kill InfoList initialized in EnumDeviceClasses */
-            if (hDevInfo)
-            {
-                SetupDiDestroyDeviceInfoList(hDevInfo);
-                hDevInfo = NULL;
-            }
-
-            /* don't insert classes with no devices */
-            if (!TreeView_GetChild(m_hTreeView,
-                                   hDevItem))
-            {
-                (void)TreeView_DeleteItem(m_hTreeView,
-                                          hDevItem);
-            }
-            else
-            {
-                (void)TreeView_SortChildren(m_hTreeView,
-                                            hDevItem,
-                                            0);
-            }
-        }
-
-        index++;
-
-    } while (ClassRet != -1);
-
-    //(void)TreeView_Expand(m_hTreeView,
-    //                      hRoot,
-    //                      TVE_EXPAND);
-
-    //(void)TreeView_SortChildren(m_hTreeView,
-    //                            hRoot,
-    //                            0);
-
-    //(void)TreeView_SelectItem(m_hTreeView,
-    //                          hRoot);
-
-    return 0;
-}
+#endif

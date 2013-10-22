@@ -3,9 +3,10 @@
 
 enum ListDevices
 {
-    ByType,
-    ByConnection
-
+    DevicesByType,
+    DevicesByConnection,
+    ResourcesByType,
+    ResourcesByConnection
 };
 
 class CDeviceView : public CDevices
@@ -39,11 +40,14 @@ public:
         m_ListDevices = List;
     }
 
-    static unsigned int __stdcall ListDevicesThread(void *Param);
 
 private:
-    BOOL ListDevicesByConnection();
-    BOOL ListDevicesByType();
+    static unsigned int __stdcall ListDevicesThread(void *Param);
+
+    BOOL ListDevicesByConnection(
+        );
+    BOOL ListDevicesByType(
+        );
 
 
     HTREEITEM AddDeviceToTree(HWND hTreeView,
@@ -51,21 +55,8 @@ private:
                 DEVINST dnDevInst,
                 BOOL bShowHidden);
 
-    INT EnumDeviceClasses(INT ClassIndex,
-                  BOOL ShowHidden,
-                  LPTSTR DevClassName,
-                  LPTSTR DevClassDesc,
-                  BOOL *DevPresent,
-                  INT *ClassImage,
-                  BOOL *IsUnknown,
-                  BOOL *IsHidden);
 
-    LONG EnumDevices(INT index,
-            LPTSTR DeviceClassName,
-            LPTSTR DeviceName,
-            LPTSTR *DeviceID);
-
-     HTREEITEM InsertIntoTreeView(HWND hTreeView,
+    HTREEITEM InsertIntoTreeView(HWND hTreeView,
                    HTREEITEM hRoot,
                    LPTSTR lpLabel,
                    LPTSTR DeviceID,

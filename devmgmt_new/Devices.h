@@ -1,9 +1,16 @@
 #pragma once
+
+#define ROOT_NAME_SIZE  MAX_COMPUTERNAME_LENGTH + 1
+
 class CDevices
 {
 private:
     SP_CLASSIMAGELIST_DATA m_ImageListData;
     BOOL m_bInitialized;
+
+    DEVINST m_RootDevInst;
+    WCHAR m_RootName[ROOT_NAME_SIZE];
+    INT m_RootImageIndex;
 
 public:
     CDevices(void);
@@ -16,7 +23,9 @@ public:
         );
 
     BOOL GetDeviceTreeRoot(
-        _Out_ PDEVINST DevInst
+        _Out_ LPWSTR RootName,
+        _In_ DWORD RootNameSize,
+        _Out_ PINT RootImageIndex
         );
 
     BOOL GetChildDevice(
@@ -40,10 +49,22 @@ public:
         _Out_ LPBOOL IsHidden
         );
 
+    BOOL EnumChildDevices(
+        _In_ ULONG ClassIndex,
+        _In_ DWORD MemberIndex,
+        _Out_ LPBOOL HasChild,
+        _Out_ LPTSTR DeviceName,
+        _In_ DWORD DeviceNameSize,
+        _Out_ LPTSTR *DeviceID
+        );
+
     HIMAGELIST GetImageList() { return m_ImageListData.ImageList; }
 
 private:
     BOOL CreateImageList(
+        );
+
+    BOOL CreateRootDevice(
         );
 };
 

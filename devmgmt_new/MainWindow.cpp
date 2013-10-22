@@ -417,7 +417,7 @@ CMainWindow::OnCommand(WPARAM wParam,
 
         case IDC_DEVBYTYPE:
         {
-            m_DeviceView->SetDeviceListType(ByType);
+            m_DeviceView->SetDeviceListType(DevicesByType);
             CheckMenuRadioItem(m_hMenu,
                                IDC_DEVBYTYPE,
                                IDC_RESBYCONN,
@@ -429,7 +429,7 @@ CMainWindow::OnCommand(WPARAM wParam,
 
         case IDC_DEVBYCONN:
         {
-            m_DeviceView->SetDeviceListType(ByConnection);
+            m_DeviceView->SetDeviceListType(DevicesByConnection);
             CheckMenuRadioItem(m_hMenu,
                                IDC_DEVBYTYPE,
                                IDC_RESBYCONN,
