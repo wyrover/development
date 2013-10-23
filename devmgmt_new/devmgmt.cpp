@@ -23,7 +23,7 @@ wWinMain(HINSTANCE hThisInstance,
     if (hMutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
     {
         /* Cleanup and exit */
-        if (hMutex) CloseHandle(hMutex);
+        //if (hMutex) CloseHandle(hMutex);
         //return 0;
     }
 
