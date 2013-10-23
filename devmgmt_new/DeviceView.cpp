@@ -187,7 +187,7 @@ CDeviceView::ListDevicesByType()
 
             /* Insert the new class under the root item */
             hDevItem = InsertIntoTreeView(m_hTreeRoot,
-                                          ClassDescription,
+                                          ClassName,//ClassDescription,
                                           NULL,
                                           ClassImage,
                                           0);
@@ -222,7 +222,7 @@ CDeviceView::ListDevicesByType()
                     if (DeviceHasProblem)
                     {
                         /* Expand the class */
-                        (void)TreeView_Expand(m_hTreeView,
+                        (VOID)TreeView_Expand(m_hTreeView,
                                               hDevItem,
                                               TVE_EXPAND);
                     }
@@ -232,18 +232,18 @@ CDeviceView::ListDevicesByType()
 
             } while (HasChild);
 
-            /* don't insert classes with no devices */
-            if (!TreeView_GetChild(m_hTreeView,
-                                   hDevItem))
+            /* Check if this class has any devices */
+            if (TreeView_GetChild(m_hTreeView, hDevItem))
             {
-                (void)TreeView_DeleteItem(m_hTreeView,
-                                          hDevItem);
+                /* Sort the devices alphabetically */
+                (VOID)TreeView_SortChildren(m_hTreeView,
+                                            hDevItem,
+                                            0);
             }
             else
             {
-                (void)TreeView_SortChildren(m_hTreeView,
-                                            hDevItem,
-                                            0);
+                /* The class has no devices, delete it from the treeview */
+                (VOID)TreeView_DeleteItem(m_hTreeView, hDevItem);
             }
         }
 
@@ -251,16 +251,19 @@ CDeviceView::ListDevicesByType()
 
     } while (bSuccess);
 
-    (void)TreeView_Expand(m_hTreeView,
-                          m_hTreeRoot,
-                          TVE_EXPAND);
+    ///* Sort the classes alphabetically */
+    //(VOID)TreeView_SortChildren(m_hTreeView,
+    //                            m_hTreeRoot,
+    //                            0);
 
-    (void)TreeView_SortChildren(m_hTreeView,
-                                m_hTreeRoot,
-                                0);
+    ///* Expand the root item */
+    //(VOID)TreeView_Expand(m_hTreeView,
+    //                      m_hTreeRoot,
+    //                      TVE_EXPAND);
 
-    (void)TreeView_SelectItem(m_hTreeView,
-                              m_hTreeRoot);
+    ///* Pre-select the root item */
+    //(VOID)TreeView_SelectItem(m_hTreeView,
+    //                          m_hTreeRoot);
 
     return 0;
 }

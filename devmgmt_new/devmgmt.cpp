@@ -24,7 +24,7 @@ wWinMain(HINSTANCE hThisInstance,
     {
         /* Cleanup and exit */
         if (hMutex) CloseHandle(hMutex);
-        return 0;
+        //return 0;
     }
 
     /* Store the global values */
