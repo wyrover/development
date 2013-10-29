@@ -73,5 +73,9 @@ private:
 
     BOOL CreateRootDevice(
         );
+
+    DWORD ConvertResourceDescriptorToString(
+        _Inout_z_ LPWSTR ResourceDescriptor
+        );
 };
 

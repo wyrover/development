@@ -195,7 +195,7 @@ CDeviceView::ListDevicesByType()
 
             /* Insert the new class under the root item */
             hDevItem = InsertIntoTreeView(m_hTreeRoot,
-                                          ClassName,//ClassDescription,
+                                          ClassDescription,
                                           NULL,
                                           ClassImage,
                                           0);

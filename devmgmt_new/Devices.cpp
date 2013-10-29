@@ -123,10 +123,11 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
                       _Out_ LPBOOL IsUnknown,
                       _Out_ LPBOOL IsHidden)
 {
-    DWORD RequiredSize;
+    DWORD RequiredSize, Type, Size;
     GUID ClassGuid;
-    HKEY hKey;
     CONFIGRET cr;
+    DWORD Success;
+    HKEY hKey;
 
     ClassName[0] = UNICODE_NULL;
     ClassDesc[0] = UNICODE_NULL;
@@ -134,21 +135,20 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
     *IsUnknown = FALSE;
     *IsHidden = FALSE;
 
+    /* Get the next class in the list */
     cr = CM_Enumerate_Classes(ClassIndex,
                               &ClassGuid,
                               0);
-    if (cr != CR_SUCCESS)
-        return FALSE;
+    if (cr != CR_SUCCESS) return FALSE;
 
+    /* Get the name of the device class */
     RequiredSize = MAX_CLASS_NAME_LEN;
-    if (SetupDiClassNameFromGuidW(&ClassGuid,
-                                  ClassName,
-                                  RequiredSize,
-                                  &RequiredSize))
-    {
-        wcscpy_s(ClassName, ClassNameSize, ClassName);
-    }
+    (VOID)SetupDiClassNameFromGuidW(&ClassGuid,
+                                    ClassName,
+                                    RequiredSize,
+                                    &RequiredSize);
 
+    /* Open the registry key for this class */
     hKey = SetupDiOpenClassRegKeyExW(&ClassGuid,
                                      MAXIMUM_ALLOWED,
                                      DIOCR_INSTALLER,
@@ -156,21 +156,36 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
                                      0);
     if (hKey != INVALID_HANDLE_VALUE)
     {
-        DWORD Type = REG_SZ;
-        DWORD Size = ClassDescSize;
+        Size = ClassDescSize;
+        Type = REG_SZ;
 
-        if (RegQueryValueExW(hKey,
-                               L"ClassDesc",
-                               NULL,
-                               &Type,
-                               (LPBYTE)ClassDesc,
-                               &Size) != ERROR_SUCCESS)
+        /* Lookup the class description */
+        Success = RegQueryValueExW(hKey,
+                                   L"ClassDesc",
+                                   NULL,
+                                   &Type,
+                                   (LPBYTE)ClassDesc,
+                                   &Size);
+        if (Success == ERROR_SUCCESS)
+        {
+            /* Check if the string starts with an @ */
+            if (ClassDesc[0] == L'@')
+            {
+                /* The description is located in a module resource */
+                Success = ConvertResourceDescriptorToString(ClassDesc);
+            }
+        }
+        
+        if (Success != ERROR_SUCCESS)
         {
             wcscpy_s(ClassDesc, ClassDescSize, ClassName);
         }
+
+        /* Close the registry key */
+        RegCloseKey(hKey);
     }
 
-    RegCloseKey(hKey);
+    
 
     (VOID)SetupDiGetClassImageIndex(&m_ImageListData,
                                     &ClassGuid,
@@ -357,4 +372,36 @@ Cleanup:
     if (hRootImage) DeleteObject(hRootImage);
 
     return bSuccess;
+}
+
+
+DWORD
+CDevices::ConvertResourceDescriptorToString(_Inout_z_ LPWSTR ResourceDescriptor)
+{
+    WCHAR ModulePath[MAX_PATH];
+    HMODULE hModule;
+    LPWSTR ptr;
+
+    WCHAR test[256];
+
+    ptr = wcschr(ResourceDescriptor, L',');
+    if (ptr == NULL) return ERROR_INVALID_DATA;
+
+    *ptr = UNICODE_NULL;
+    
+    //wcscpy_s(ModulePath, MAX_PATH, &ResourceDescriptor[1]);
+
+    ExpandEnvironmentStringsW(&ResourceDescriptor[1], ModulePath, MAX_PATH);
+
+    hModule = LoadLibraryExW(ModulePath, NULL, LOAD_LIBRARY_AS_DATAFILE);
+
+    *ptr = L',';
+    ptr++;
+
+    int i = _wtoi(ptr);
+    LoadStringW(hModule, -i, test, 256);
+
+    
+
+    return 0;
 }

@@ -40,8 +40,7 @@ wWinMain(HINSTANCE hThisInstance,
     if (szAppName.LoadStringW(g_hInstance, IDS_APPNAME))
     {
         /* Initialize the main window */
-        if (MainWindow.Initialize(szAppName,
-                                  nCmdShow))
+        if (MainWindow.Initialize(szAppName, nCmdShow))
         {
             /* Run the application */
             Ret = MainWindow.Run();
