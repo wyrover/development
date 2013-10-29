@@ -379,6 +379,19 @@ CMainWindow::OnSize()
 LRESULT
 CMainWindow::OnNotify(LPARAM lParam)
 {
+    LPNMHDR NmHdr = (LPNMHDR)lParam;
+
+    switch (NmHdr->code)
+    {
+        case TVN_DELETEITEMW:
+        {
+            LPNMTREEVIEW NmTreeView = (LPNMTREEVIEW)lParam;
+
+            NmTreeView->action = NmTreeView->action;
+
+            break;
+        }
+    }
 
     return 0;
 }

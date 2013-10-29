@@ -114,7 +114,15 @@ unsigned int __stdcall CDeviceView::ListDevicesThread(void *Param)
 {
     CDeviceView *This = (CDeviceView *)Param;
 
-    (VOID)TreeView_DeleteAllItems(This->m_hTreeView);
+    /* Check if there are any items in the tree */
+    if (TreeView_GetRoot(This->m_hTreeView) != NULL)
+    {
+        /* Delete all the items */
+        (VOID)TreeView_DeleteAllItems(This->m_hTreeView);
+    }
+
+    /* Reset the tree root */
+    This->m_hTreeRoot = NULL;
 
     switch (This->m_ListDevices)
     {
@@ -163,7 +171,7 @@ CDeviceView::ListDevicesByType()
     }
 
     /* If something went wrong, bail */
-    if (m_hTreeView == NULL) return FALSE;
+    if (m_hTreeRoot == NULL) return FALSE;
 
     ClassIndex = 0;
     do
