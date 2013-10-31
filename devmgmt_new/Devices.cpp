@@ -172,12 +172,14 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
             if (ClassDesc[0] == L'@')
             {
                 /* The description is located in a module resource */
-                Success = ConvertResourceDescriptorToString(ClassDesc);
+                Success = ConvertResourceDescriptorToString(ClassDesc, ClassDescSize);
             }
         }
         
+        /* Check if we failed to get the class description */
         if (Success != ERROR_SUCCESS)
         {
+            /* Use the class name as the description */
             wcscpy_s(ClassDesc, ClassDescSize, ClassName);
         }
 
@@ -185,8 +187,7 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
         RegCloseKey(hKey);
     }
 
-    
-
+    /* Get the image index for this class */
     (VOID)SetupDiGetClassImageIndex(&m_ImageListData,
                                     &ClassGuid,
                                     ClassImage);
@@ -376,32 +377,68 @@ Cleanup:
 
 
 DWORD
-CDevices::ConvertResourceDescriptorToString(_Inout_z_ LPWSTR ResourceDescriptor)
+CDevices::ConvertResourceDescriptorToString(_Inout_z_ LPWSTR ResourceDescriptor,
+                                            _In_ DWORD ResourceDescriptorSize)
 {
     WCHAR ModulePath[MAX_PATH];
+    WCHAR ResString[256];
+    INT ResourceId;
     HMODULE hModule;
     LPWSTR ptr;
-
-    WCHAR test[256];
-
-    ptr = wcschr(ResourceDescriptor, L',');
-    if (ptr == NULL) return ERROR_INVALID_DATA;
-
-    *ptr = UNICODE_NULL;
-    
-    //wcscpy_s(ModulePath, MAX_PATH, &ResourceDescriptor[1]);
-
-    ExpandEnvironmentStringsW(&ResourceDescriptor[1], ModulePath, MAX_PATH);
-
-    hModule = LoadLibraryExW(ModulePath, NULL, LOAD_LIBRARY_AS_DATAFILE);
-
-    *ptr = L',';
-    ptr++;
-
-    int i = _wtoi(ptr);
-    LoadStringW(hModule, -i, test, 256);
-
+    DWORD Size;
+    DWORD dwError;
     
 
-    return 0;
+    /* First check for a semi colon */
+    ptr = wcschr(ResourceDescriptor, L';');
+    if (ptr)
+    {
+        /* This must be an inf based descriptor, the desc is after the semi colon */
+        wcscpy_s(ResourceDescriptor, ResourceDescriptorSize, ++ptr);
+        dwError = ERROR_SUCCESS;
+    }
+    else
+    {
+        /* This must be a dll resource based descriptor. Find the comma */
+        ptr = wcschr(ResourceDescriptor, L',');
+        if (ptr == NULL) return ERROR_INVALID_DATA;
+
+        /* Terminate the string where the comma was */
+        *ptr = UNICODE_NULL;
+
+        /* Expand any environment strings */
+        Size = ExpandEnvironmentStringsW(&ResourceDescriptor[1], ModulePath, MAX_PATH);
+        if (Size > MAX_PATH) return ERROR_BUFFER_OVERFLOW;
+        if (Size == 0) return GetLastError();
+
+        /* Put the comma back and move past it */
+        *ptr = L',';
+        ptr++;
+
+        /* Load the dll */
+        hModule = LoadLibraryExW(ModulePath, NULL, LOAD_LIBRARY_AS_DATAFILE);
+        if (hModule == NULL) return GetLastError();
+
+        /* Convert the resource id to a number */
+        ResourceId = _wtoi(ptr);
+
+        /* If the number is negative, make it positive */
+        if (ResourceId < 0) ResourceId = -ResourceId;
+
+        /* Load the string from the dll */
+        if (LoadStringW(hModule, ResourceId, ResString, 256))
+        {
+            wcscpy_s(ResourceDescriptor, ResourceDescriptorSize, ResString);
+            dwError = ERROR_SUCCESS;
+        }
+        else
+        {
+            dwError = GetLastError();
+        }
+
+        /* Free the library */
+        FreeLibrary(hModule);
+    }
+
+    return dwError;
 }

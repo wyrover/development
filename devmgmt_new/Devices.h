@@ -75,7 +75,8 @@ private:
         );
 
     DWORD ConvertResourceDescriptorToString(
-        _Inout_z_ LPWSTR ResourceDescriptor
+        _Inout_z_ LPWSTR ResourceDescriptor,
+        _In_ DWORD ResourceDescriptorSize
         );
 };
 

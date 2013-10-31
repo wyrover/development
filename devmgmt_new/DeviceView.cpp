@@ -259,19 +259,19 @@ CDeviceView::ListDevicesByType()
 
     } while (bSuccess);
 
-    ///* Sort the classes alphabetically */
-    //(VOID)TreeView_SortChildren(m_hTreeView,
-    //                            m_hTreeRoot,
-    //                            0);
+    /* Sort the classes alphabetically */
+    (VOID)TreeView_SortChildren(m_hTreeView,
+                                m_hTreeRoot,
+                                0);
 
-    ///* Expand the root item */
-    //(VOID)TreeView_Expand(m_hTreeView,
-    //                      m_hTreeRoot,
-    //                      TVE_EXPAND);
+    /* Expand the root item */
+    (VOID)TreeView_Expand(m_hTreeView,
+                          m_hTreeRoot,
+                          TVE_EXPAND);
 
-    ///* Pre-select the root item */
-    //(VOID)TreeView_SelectItem(m_hTreeView,
-    //                          m_hTreeRoot);
+    /* Pre-select the root item */
+    (VOID)TreeView_SelectItem(m_hTreeView,
+                              m_hTreeRoot);
 
     return 0;
 }
