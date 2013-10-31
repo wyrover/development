@@ -23,6 +23,9 @@ class CDeviceView : public CDevices
 
     HTREEITEM m_hTreeRoot;
 
+    BOOL m_ShowHidden;
+    BOOL m_ShowUnknown;
+
 public:
     CDeviceView(HWND hMainWnd);
     ~CDeviceView(void);
@@ -30,7 +33,13 @@ public:
     BOOL Initialize();
     BOOL Uninitialize();
 
-    VOID Size(INT x, INT y, INT cx, INT cy);
+    VOID Size(
+        _In_ INT x,
+        _In_ INT y,
+        _In_ INT cx,
+        _In_ INT cy
+        );
+
     VOID Refresh();
     VOID DisplayPropertySheet();
     VOID SetFocus();
@@ -40,21 +49,32 @@ public:
         m_ListDevices = List;
     }
 
+    VOID ShowHiddenDevices(_In_ BOOL ShowHidden)
+    {
+        m_ShowHidden = ShowHidden;
+    }
+
+    VOID ShowUnknownDevices(BOOL ShowUnknown)
+    {
+        m_ShowUnknown = ShowUnknown;
+    }
 
 private:
-    static unsigned int __stdcall ListDevicesThread(void *Param);
+    static unsigned int __stdcall ListDevicesThread(
+        void *Param
+        );
 
     BOOL ListDevicesByConnection(
         );
     BOOL ListDevicesByType(
         );
 
-
-    HTREEITEM AddDeviceToTree(HWND hTreeView,
-                HTREEITEM hRoot,
-                DEVINST dnDevInst,
-                BOOL bShowHidden);
-
+    HTREEITEM AddDeviceToTree(
+        _In_ HWND hTreeView,
+        _In_ HTREEITEM hRoot,
+        _In_ DEVINST dnDevInst,
+        _In_ BOOL bShowHidden
+        );
 
     HTREEITEM InsertIntoTreeView(
         _In_ HTREEITEM hParent,

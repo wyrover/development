@@ -175,16 +175,20 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
                 Success = ConvertResourceDescriptorToString(ClassDesc, ClassDescSize);
             }
         }
-        
-        /* Check if we failed to get the class description */
-        if (Success != ERROR_SUCCESS)
-        {
-            /* Use the class name as the description */
-            wcscpy_s(ClassDesc, ClassDescSize, ClassName);
-        }
 
         /* Close the registry key */
         RegCloseKey(hKey);
+    }
+    else
+    {
+        Success = GetLastError();
+    }
+
+    /* Check if we failed to get the class description */
+    if (Success != ERROR_SUCCESS)
+    {
+        /* Use the class name as the description */
+        wcscpy_s(ClassDesc, ClassDescSize, ClassName);
     }
 
     /* Get the image index for this class */
@@ -192,8 +196,10 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
                                     &ClassGuid,
                                     ClassImage);
 
+    /* Check if this is an unknown device */
     *IsUnknown = IsEqualGUID(ClassGuid, GUID_DEVCLASS_UNKNOWN);
 
+    /* Check if this is one of the classes we hide by default */
     if (IsEqualGUID(ClassGuid, GUID_DEVCLASS_LEGACYDRIVER) ||
         IsEqualGUID(ClassGuid, GUID_DEVCLASS_VOLUME))
     {
@@ -203,130 +209,108 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
     return TRUE;
 }
 
-
 BOOL
-CDevices::EnumClassDevices(
-        _In_ ULONG ClassIndex,
-        _In_ DWORD MemberIndex,
-        _Out_ LPBOOL HasChild,
-        _Out_ LPTSTR DeviceName,
-        _In_ DWORD DeviceNameSize,
-        _Out_ LPTSTR *DeviceID)
+CDevices::EnumClassDevices(_In_ ULONG ClassIndex,
+                           _In_ DWORD MemberIndex,
+                           _Out_ LPBOOL HasChild,
+                           _Out_ LPTSTR DeviceName,
+                           _In_ DWORD DeviceNameSize,
+                           _Out_ LPTSTR *DeviceId)
 {
     SP_DEVINFO_DATA DeviceInfoData;
     CONFIGRET cr;
     DWORD DevIdSize;
-
-    HDEVINFO hDevInfo = NULL;
-    BOOL IsUnknown;
+    GUID ClassGuid;
+    HDEVINFO hDevInfo;
+    BOOL bSuccess;
 
     *HasChild = FALSE;
     *DeviceName = _T('\0');
-    *DeviceID = NULL;
+    *DeviceId = NULL;
 
-
-    GUID ClassGuid;
+    /* Get the class guid for the devices we're enumerating */
     cr = CM_Enumerate_Classes(ClassIndex,
                               &ClassGuid,
                               0);
-    if (cr != CR_SUCCESS)
-        return FALSE;
-
-    IsUnknown = IsEqualGUID(ClassGuid, GUID_DEVCLASS_UNKNOWN);
+    if (cr != CR_SUCCESS) return FALSE;
 
     /* Get device info for all devices of a particular class */
-    hDevInfo = SetupDiGetClassDevsW(IsUnknown ? NULL : &ClassGuid,
+    hDevInfo = SetupDiGetClassDevsW(&ClassGuid,
                                     NULL,
                                     NULL,
-                                    DIGCF_PRESENT | (IsUnknown ? DIGCF_ALLCLASSES : 0));
+                                    DIGCF_PRESENT);
     if (hDevInfo == INVALID_HANDLE_VALUE)
-    {
         return FALSE;
-    }
 
-
+    /* Setup a device into struct */
     ZeroMemory(&DeviceInfoData, sizeof(SP_DEVINFO_DATA));
     DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
 
-    if (!SetupDiEnumDeviceInfo(hDevInfo,
-                               MemberIndex,
-                               &DeviceInfoData))
-    {
-        //if (GetLastError() == ERROR_NO_MORE_ITEMS)
-        //{
-        //    return TRUE;
-        //}
-        //else
-            return FALSE;
-    }
+    /* Get the device info for this device in the class */
+    bSuccess = SetupDiEnumDeviceInfo(hDevInfo,
+                                     MemberIndex,
+                                     &DeviceInfoData);
+    if (bSuccess == FALSE) goto Quit;
 
-    //if (!IsEqualGUID(DeviceInfoData.ClassGuid, GUID_NULL))
-    //{
-    //    /* we're looking for unknown devices and this isn't one */
-    //    return FALSE;
-    //}
-
+    /* We found a device, let the caller know */
     *HasChild = TRUE;
 
-    /* get the device ID */
-    if (!SetupDiGetDeviceInstanceId(hDevInfo,
-                                    &DeviceInfoData,
-                                    NULL,
-                                    0,
-                                    &DevIdSize))
+    /* Get the size required to hold the device id */
+    bSuccess = SetupDiGetDeviceInstanceIdW(hDevInfo,
+                                           &DeviceInfoData,
+                                           NULL,
+                                           0,
+                                           &DevIdSize);
+    if (bSuccess == FALSE && (GetLastError() != ERROR_INSUFFICIENT_BUFFER))
+        goto Quit;
+
+    /* Allocate some heap to hold the device string */
+    *DeviceId = (LPTSTR)HeapAlloc(GetProcessHeap(),
+                                  0,
+                                  DevIdSize * sizeof(WCHAR));
+    if (*DeviceId == NULL) goto Quit;
+
+    /* Now get the device id string */
+    bSuccess = SetupDiGetDeviceInstanceIdW(hDevInfo,
+                                           &DeviceInfoData,
+                                           *DeviceId,
+                                           DevIdSize,
+                                           NULL);
+    if (bSuccess == FALSE) goto Quit;
+
+    /* Get the device's friendly name */
+    bSuccess = SetupDiGetDeviceRegistryPropertyW(hDevInfo,
+                                                 &DeviceInfoData,
+                                                 SPDRP_FRIENDLYNAME,
+                                                 0,
+                                                 (BYTE*)DeviceName,
+                                                 256,
+                                                 NULL);
+    if (bSuccess == FALSE)
     {
-        if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+        /* if the friendly name fails, try the description instead */
+        bSuccess = SetupDiGetDeviceRegistryPropertyW(hDevInfo,
+                                                     &DeviceInfoData,
+                                                     SPDRP_DEVICEDESC,
+                                                     0,
+                                                     (BYTE*)DeviceName,
+                                                     256,
+                                                     NULL);
+    }
+
+Quit:
+    SetupDiDestroyDeviceInfoList(hDevInfo);
+
+    if (bSuccess == FALSE)
+    {
+        if (*DeviceId)
         {
-            (*DeviceID) = (LPTSTR)HeapAlloc(GetProcessHeap(),
-                                            0,
-                                            DevIdSize * sizeof(TCHAR));
-            if (*DeviceID)
-            {
-                if (!SetupDiGetDeviceInstanceId(hDevInfo,
-                                                &DeviceInfoData,
-                                                *DeviceID,
-                                                DevIdSize,
-                                                NULL))
-                {
-                    HeapFree(GetProcessHeap(),
-                             0,
-                             *DeviceID);
-                    *DeviceID = NULL;
-                }
-            }
+            HeapFree(GetProcessHeap(), 0, *DeviceId);
+            *DeviceId = NULL;
         }
     }
 
-    if (DeviceID != NULL &&
-        _tcscmp(*DeviceID, _T("HTREE\\ROOT\\0")) == 0)
-    {
-        HeapFree(GetProcessHeap(),
-                 0,
-                 *DeviceID);
-        *DeviceID = NULL;
-        return FALSE;
-    }
-
-    /* get the device's friendly name */
-    if (!SetupDiGetDeviceRegistryProperty(hDevInfo,
-                                          &DeviceInfoData,
-                                          SPDRP_FRIENDLYNAME,
-                                          0,
-                                          (BYTE*)DeviceName,
-                                          256,
-                                          NULL))
-    {
-        /* if the friendly name fails, try the description instead */
-        SetupDiGetDeviceRegistryProperty(hDevInfo,
-                                         &DeviceInfoData,
-                                         SPDRP_DEVICEDESC,
-                                         0,
-                                         (BYTE*)DeviceName,
-                                         256,
-                                         NULL);
-    }
-
-    return TRUE;
+    return bSuccess;
 }
 
 
