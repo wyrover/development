@@ -11,11 +11,12 @@ CDeviceView::CDeviceView(HWND hMainWnd) :
     m_hTreeView(NULL),
     m_hPropertyDialog(NULL),
     m_hShortcutMenu(NULL),
-    m_ListDevices(DevicesByType)
+    m_ListDevices(DevicesByType),
+    m_ShowHidden(TRUE),
+    m_ShowUnknown(TRUE)
 {
     m_Devices = new CDevices();
 }
-
 
 CDeviceView::~CDeviceView(void)
 {
@@ -185,7 +186,9 @@ CDeviceView::ListDevicesByType()
                                           &ClassImage,
                                           &IsUnknown,
                                           &IsHidden);
-        if (bSuccess)
+        if (bSuccess)// &&
+          //  (IsUnknown == FALSE || (IsUnknown && m_ShowUnknown)) &&
+            //(IsHidden == FALSE || (IsHidden && m_ShowHidden)))
         {
             WCHAR DeviceName[256];
             INT DeviceIndex = 0;
@@ -203,6 +206,13 @@ CDeviceView::ListDevicesByType()
             do
             {
                 /* Get the next device in this class */
+                //HasChild = m_Devices->EnumClassDevices(ClassIndex,
+                //                                DeviceIndex,
+                //                                &HasChild,
+                //                                DeviceName,
+                //                                256,
+                //                                &DeviceId);
+                //if (HasChild)
                 if (m_Devices->EnumClassDevices(ClassIndex,
                                                 DeviceIndex,
                                                 &HasChild,
