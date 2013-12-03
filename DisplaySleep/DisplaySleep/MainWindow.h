@@ -24,8 +24,9 @@ public:
 private:
     static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-    BOOL AddTrayIcon();
-    BOOL TurnDisplayOff();
+    BOOL AddTrayIcon(void);
+    BOOL RemoveTrayIcon(void);
+    BOOL TurnDisplayOff(void);
 
     LRESULT OnCreate(HWND hwnd);
     LRESULT OnDestroy();

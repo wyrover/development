@@ -11,7 +11,6 @@
 #define IDM_ABOUT				104
 #define IDM_EXIT				105
 #define IDI_DISPLAYSLEEP			107
-#define IDI_SMALL				108
 #define IDC_DISPLAYSLEEP			109
 #define IDC_MYICON				2
 #ifndef IDC_STATIC
@@ -33,4 +32,8 @@
 
 
 #define IDS_APPNAME         200
-#define IDT_TIMER           201
+#define IDS_TRAYTIP         201
+
+#define IDT_TIMER           210
+
+#define WM_ONTRAYICON       WM_USER + 1

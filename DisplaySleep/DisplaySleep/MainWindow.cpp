@@ -39,7 +39,7 @@ CMainWindow::Initialize(LPCTSTR lpCaption,
     wc.lpszMenuName = NULL;
     wc.lpszClassName = m_szMainWndClass;
     wc.hIconSm = (HICON)LoadImage(g_hInstance,
-                                  MAKEINTRESOURCE(IDI_SMALL),
+                                  MAKEINTRESOURCE(IDI_DISPLAYSLEEP),
                                   IMAGE_ICON,
                                   16,
                                   16,
@@ -63,7 +63,7 @@ CMainWindow::Initialize(LPCTSTR lpCaption,
                                      this);
         if (m_hMainWnd)
         {
-
+            ShowWindow(m_hMainWnd, SW_NORMAL);
         }
     }
 
@@ -107,25 +107,23 @@ BOOL
 CMainWindow::AddTrayIcon(void)
 {
     NOTIFYICONDATAW nid;
-    HICON           hIcon = NULL;
-    BOOL            bRetVal;
-    WCHAR           szMsg[64];
+    HICON hIcon = NULL;
+    WCHAR szTip[128];
+    BOOL bRetVal;
 
-    memset(&nid, 0, sizeof(NOTIFYICONDATAW));
+    ZeroMemory(&nid, sizeof(NOTIFYICONDATAW));
 
-    //hIcon = TrayIcon_GetProcessorUsageIcon();
     hIcon = LoadIconW(g_hInstance, MAKEINTRESOURCEW(IDI_DISPLAYSLEEP));
 
     nid.cbSize = sizeof(NOTIFYICONDATAW);
     nid.hWnd = m_hMainWnd;
     nid.uID = 0;
     nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-    nid.uCallbackMessage = 1000;//WM_ONTRAYICON;
+    nid.uCallbackMessage = WM_ONTRAYICON;
     nid.hIcon = hIcon;
 
-
-   // LoadStringW( GetModuleHandleW(NULL), IDS_MSG_TRAYICONCPUUSAGE, szMsg, sizeof(szMsg) / sizeof(szMsg[0]));
-   // wsprintfW(nid.szTip, szMsg, PerfDataGetProcessorUsage());
+    LoadStringW(g_hInstance, IDS_TRAYTIP, szTip, 64);
+    wcscpy_s(nid.szTip, 128, szTip);
 
     bRetVal = Shell_NotifyIconW(NIM_ADD, &nid);
 
@@ -135,10 +133,28 @@ CMainWindow::AddTrayIcon(void)
     return bRetVal;
 }
 
+BOOL
+CMainWindow::RemoveTrayIcon(void)
+{
+    NOTIFYICONDATAW nid;
+    BOOL bRetVal;
+
+    ZeroMemory(&nid, sizeof(NOTIFYICONDATAW));
+
+    nid.cbSize = sizeof(NOTIFYICONDATAW);
+    nid.hWnd = m_hMainWnd;
+    nid.uID = 0;
+    nid.uFlags = 0;
+    nid.uCallbackMessage = WM_ONTRAYICON;
+
+    bRetVal = Shell_NotifyIconW(NIM_DELETE, &nid);
+
+    return bRetVal;
+}
+
 LRESULT
 CMainWindow::OnCreate(HWND hwnd)
 {
-    /* Store the window handle */
     m_hMainWnd = hwnd;
 
     if (!AddTrayIcon())
@@ -146,7 +162,7 @@ CMainWindow::OnCreate(HWND hwnd)
 
     if (SetTimer(hwnd, IDT_TIMER, 3000, NULL) == 0)
     {
-        //RemoveTrayIcon();
+        RemoveTrayIcon();
         return -1;
     }
 
@@ -252,6 +268,7 @@ CMainWindow::OnCommand(WPARAM wParam,
 LRESULT
 CMainWindow::OnDestroy()
 {
+    RemoveTrayIcon();
 
     /* Clear the user data pointer */
     SetWindowLongPtr(m_hMainWnd, GWLP_USERDATA, 0);
@@ -319,11 +336,17 @@ CMainWindow::MainWndProc(HWND hwnd,
             break;
         }
 
-        case 1000://WM_ONTRAYICON:
+        case WM_ONTRAYICON:
         {
+            
             switch(lParam)
             {
                 case WM_RBUTTONDOWN:
+                    MessageBoxW(NULL, L"test", L"right", MB_OK);
+                    break;
+
+                case WM_LBUTTONDOWN:
+                    MessageBoxW(NULL, L"test", L"left", MB_OK);
                     break;
             }
         }
