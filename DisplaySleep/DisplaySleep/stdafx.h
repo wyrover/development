@@ -11,6 +11,6 @@
 // Windows Header Files:
 #include <windows.h>
 #include <Commctrl.h>
-
+#include <shellapi.h>
 
 // TODO: reference additional headers your program requires here

@@ -4,7 +4,7 @@
 
 /* DATA *****************************************************/
 
-
+#define SLEEP_TIME      (60000 * 3) // 3 minutes
 
 
 /* PUBLIC METHODS **********************************************/
@@ -33,8 +33,8 @@ CMainWindow::Initialize(LPCTSTR lpCaption,
     wc.cbSize = sizeof(WNDCLASSEXW);
     wc.lpfnWndProc = MainWndProc;
     wc.hInstance = g_hInstance;
-    wc.hIcon = LoadIcon(g_hInstance, MAKEINTRESOURCEW(IDI_DISPLAYSLEEP));
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wc.hIcon = LoadIconW(g_hInstance, MAKEINTRESOURCEW(IDI_DISPLAYSLEEP));
+    wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_BTNFACE + 1);
     wc.lpszMenuName = NULL;
     wc.lpszClassName = m_szMainWndClass;
@@ -96,17 +96,59 @@ CMainWindow::Run()
 
 /* PRIVATE METHODS **********************************************/
 
+BOOL
+CMainWindow::TurnDisplayOff()
+{
+    SendMessageW(HWND_BROADCAST, WM_SYSCOMMAND, SC_MONITORPOWER, 2);
+    return TRUE;
+}
+
+BOOL
+CMainWindow::AddTrayIcon(void)
+{
+    NOTIFYICONDATAW nid;
+    HICON           hIcon = NULL;
+    BOOL            bRetVal;
+    WCHAR           szMsg[64];
+
+    memset(&nid, 0, sizeof(NOTIFYICONDATAW));
+
+    //hIcon = TrayIcon_GetProcessorUsageIcon();
+    hIcon = LoadIconW(g_hInstance, MAKEINTRESOURCEW(IDI_DISPLAYSLEEP));
+
+    nid.cbSize = sizeof(NOTIFYICONDATAW);
+    nid.hWnd = m_hMainWnd;
+    nid.uID = 0;
+    nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+    nid.uCallbackMessage = 1000;//WM_ONTRAYICON;
+    nid.hIcon = hIcon;
+
+
+   // LoadStringW( GetModuleHandleW(NULL), IDS_MSG_TRAYICONCPUUSAGE, szMsg, sizeof(szMsg) / sizeof(szMsg[0]));
+   // wsprintfW(nid.szTip, szMsg, PerfDataGetProcessorUsage());
+
+    bRetVal = Shell_NotifyIconW(NIM_ADD, &nid);
+
+    if (hIcon)
+        DestroyIcon(hIcon);
+
+    return bRetVal;
+}
+
 LRESULT
 CMainWindow::OnCreate(HWND hwnd)
 {
-    LRESULT RetCode;
-
-    /* Assume failure */
-    RetCode = -1;
-
     /* Store the window handle */
     m_hMainWnd = hwnd;
 
+    if (!AddTrayIcon())
+        return -1;
+
+    if (SetTimer(hwnd, IDT_TIMER, 3000, NULL) == 0)
+    {
+        //RemoveTrayIcon();
+        return -1;
+    }
 
     return 0;
 }
@@ -131,6 +173,31 @@ CMainWindow::OnNotify(LPARAM lParam)
             NmTreeView->action = NmTreeView->action;
 
             break;
+        }
+    }
+
+    return 0;
+}
+
+LRESULT
+CMainWindow::OnTimer(WPARAM wParam)
+{
+    LASTINPUTINFO lii;
+    ULONGLONG TickCount;
+
+    if (wParam == IDT_TIMER)
+    {
+        ZeroMemory(&lii, sizeof(LASTINPUTINFO));
+        lii.cbSize = sizeof(LASTINPUTINFO);
+
+        if (GetLastInputInfo(&lii))
+        {
+            TickCount = GetTickCount64();
+
+            if (TickCount  > lii.dwTime + SLEEP_TIME)
+            {
+                TurnDisplayOff();
+            }
         }
     }
 
@@ -244,6 +311,21 @@ CMainWindow::MainWndProc(HWND hwnd,
             /* Handle the notify message */
             RetCode = pThis->OnNotify(lParam);
             break;
+        }
+
+        case WM_TIMER:
+        {
+            RetCode = pThis->OnTimer(wParam);
+            break;
+        }
+
+        case 1000://WM_ONTRAYICON:
+        {
+            switch(lParam)
+            {
+                case WM_RBUTTONDOWN:
+                    break;
+            }
         }
 
         case WM_COMMAND:

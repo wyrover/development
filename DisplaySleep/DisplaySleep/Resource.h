@@ -33,3 +33,4 @@
 
 
 #define IDS_APPNAME         200
+#define IDT_TIMER           201

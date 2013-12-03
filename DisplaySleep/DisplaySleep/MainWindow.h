@@ -24,10 +24,14 @@ public:
 private:
     static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+    BOOL AddTrayIcon();
+    BOOL TurnDisplayOff();
+
     LRESULT OnCreate(HWND hwnd);
     LRESULT OnDestroy();
     LRESULT OnSize();
     LRESULT OnNotify(LPARAM lParam);
+    LRESULT OnTimer(WPARAM wParam);
     LRESULT OnCommand(WPARAM wParam, LPARAM lParam);
 };
 
