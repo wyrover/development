@@ -50,8 +50,10 @@ CDisplayTraceProvidersDlg::EnumProvidersThread(_In_opt_ LPVOID lpParam)
                 //printf("%S  (%lu)\n", (PBYTE)pBuffer + pBuffer->TraceProviderInfoArray[i].ProviderNameOffset, pBuffer->TraceProviderInfoArray[i].SchemaSource);
 
                 TVITEM tvi;
-                tvi.mask = TVIF_TEXT;
+                tvi.mask = TVIF_TEXT | TVIF_PARAM;
                 tvi.pszText = (LPWSTR)((PBYTE)pBuffer + pBuffer->TraceProviderInfoArray[i].ProviderNameOffset);
+                tvi.cchTextMax = wcslen(tvi.pszText) + 1;
+                tvi.lParam = (LPARAM)&pBuffer->TraceProviderInfoArray[i].ProviderGuid;
 
                 TVINSERTSTRUCT tvins;
                 tvins.item = tvi;
@@ -64,7 +66,7 @@ CDisplayTraceProvidersDlg::EnumProvidersThread(_In_opt_ LPVOID lpParam)
             TreeView_SortChildren(This->m_hTreeView, TVI_ROOT, FALSE);
         }
 
-        HeapFree(GetProcessHeap(), 0, pBuffer);
+        //HeapFree(GetProcessHeap(), 0, pBuffer);
     }
 
     return 0;
@@ -116,9 +118,29 @@ CDisplayTraceProvidersDlg::WndProc(HWND hwnd,
             switch (LOWORD(wParam)) 
             { 
                 case IDOK:
+                {
+                    HTREEITEM hTreeItem;
+                    TVITEM TvItem;
+                    WCHAR Buffer[1024];
 
+                    hTreeItem = TreeView_GetSelection(This->m_hTreeView);
+                    if (hTreeItem)
+                    {
+                        ZeroMemory(&TvItem, sizeof(TVITEM));
+                        TvItem.mask = TVIF_TEXT | TVIF_PARAM;
+                        TvItem.hItem = hTreeItem;
+                        TvItem.pszText = Buffer;
+                        TvItem.cchTextMax = 1024;
 
-                    wcscpy_s(This->m_SessionName, 1024, L"test");
+                        if (TreeView_GetItem(This->m_hTreeView, &TvItem))
+                        {
+                            wcscpy_s(This->m_SessionName, 1024, TvItem.pszText);
+                            CopyMemory(&This->m_TraceGuid, (LPVOID)TvItem.lParam, sizeof(GUID));
+
+                        }
+                    }
+                }
+                // fall through
                 case IDCANCEL:
                     EndDialog(hwnd, wParam); 
                     return TRUE; 
@@ -127,7 +149,7 @@ CDisplayTraceProvidersDlg::WndProc(HWND hwnd,
         case WM_NOTIFY:
             switch (((LPNMHDR)lParam)->code)
             {
-                case TVN_ITEMCHANGED:
+                case TVN_SELCHANGEDW:
                 {
                     NMTVITEMCHANGE *pnm;
                     pnm = (NMTVITEMCHANGE *)lParam;
