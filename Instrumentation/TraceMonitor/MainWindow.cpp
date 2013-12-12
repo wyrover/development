@@ -432,7 +432,7 @@ CMainWindow::OnCommand(WPARAM wParam,
             CDisplayTraceProvidersDlg TraceProvDlg;
 
             TraceProvDlg.ShowDialog(m_hMainWnd);
-
+            LPCWSTR test = TraceProvDlg.GetSessionName();
             break;
         }
 
