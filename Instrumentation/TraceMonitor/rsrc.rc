@@ -12,7 +12,7 @@ IDB_REFRESH BITMAP DISCARDABLE "res/refresh.bmp"
 IDB_HELP    BITMAP DISCARDABLE "res/help.bmp"
 IDB_EXIT    BITMAP DISCARDABLE "res/exit.bmp"
 
-
+#define LANGUAGE_EN_US
 #ifdef LANGUAGE_EN_US
     #include "lang/en-US.rc"
 #endif

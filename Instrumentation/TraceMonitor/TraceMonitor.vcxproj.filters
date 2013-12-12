@@ -21,9 +21,6 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="About.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="TraceView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -31,6 +28,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TraceMonitor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DisplayTraceProvidersDlg.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AboutDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,13 +50,16 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="About.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="TraceView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EtlReader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DisplayTraceProvidersDlg.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AboutDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -61,5 +67,25 @@
     <ResourceCompile Include="devmgmt.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\computer.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\root.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\properties.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\refresh.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\help.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\exit.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

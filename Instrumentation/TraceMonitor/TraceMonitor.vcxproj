@@ -58,7 +58,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>comctl32.lib;setupapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>comctl32.lib;setupapi.lib;tdh.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <ResourceCompile>
       <PreprocessorDefinitions>LANGUAGE_EN_US;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -82,7 +82,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="About.cpp" />
+    <ClCompile Include="AboutDlg.cpp" />
+    <ClCompile Include="DisplayTraceProvidersDlg.cpp" />
     <ClCompile Include="EtlReader.cpp" />
     <ClCompile Include="TraceView.cpp" />
     <ClCompile Include="TraceMonitor.cpp" />
@@ -90,7 +91,8 @@
     <ClCompile Include="stdafx.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="About.h" />
+    <ClInclude Include="AboutDlg.h" />
+    <ClInclude Include="DisplayTraceProvidersDlg.h" />
     <ClInclude Include="EtlReader.h" />
     <ClInclude Include="TraceView.h" />
     <ClInclude Include="devmgmt.h" />
@@ -100,6 +102,14 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="devmgmt.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\computer.ico" />
+    <Image Include="res\exit.bmp" />
+    <Image Include="res\help.bmp" />
+    <Image Include="res\properties.bmp" />
+    <Image Include="res\refresh.bmp" />
+    <Image Include="res\root.bmp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -8,6 +8,8 @@
 #include <commctrl.h>
 #include <Cfgmgr32.h>
 #include <devguid.h>
+#include <tdh.h>
+#include <process.h>
 
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // some CString constructors will be explicit
 

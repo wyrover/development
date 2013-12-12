@@ -1,7 +1,8 @@
 #include "StdAfx.h"
 #include "devmgmt.h"
 #include "MainWindow.h"
-#include "About.h"
+#include "DisplayTraceProvidersDlg.h"
+#include "AboutDlg.h"
 
 /* DATA *****************************************************/
 
@@ -17,10 +18,7 @@ static const MENU_HINT MainMenuHintTable[] =
 
     {IDC_ABOUT,    IDS_HINT_ABOUT},
 
-    {IDC_DEVBYTYPE, IDS_HINT_DEV_BY_TYPE},
-    {IDC_DEVBYCONN, IDS_HINT_DEV_BY_CONN},
-    {IDC_RESBYTYPE, IDS_HINT_RES_BY_TYPE},
-    {IDC_RESBYCONN, IDS_HINT_RES_BY_TYPE}
+    {IDC_DEVBYTYPE, IDS_HINT_DEV_BY_TYPE}
 
 };
 
@@ -429,10 +427,19 @@ CMainWindow::OnCommand(WPARAM wParam,
             break;
         }
 
+        case IDC_DEVBYTYPE:
+        {
+            CDisplayTraceProvidersDlg TraceProvDlg;
+
+            TraceProvDlg.ShowDialog(m_hMainWnd);
+
+            break;
+        }
+
         case IDC_ABOUT:
         {
             /* Blow my own trumpet */
-            CAbout AboutDialog;
+            CAboutDlg AboutDialog;
 
             AboutDialog.ShowDialog(m_hMainWnd);
 
