@@ -19,12 +19,12 @@ wWinMain(HINSTANCE hThisInstance,
     int Ret = 1;
 
     /* Check if the app is already running */
-    hMutex = CreateMutexW(NULL, TRUE, L"devmgmt_mutex");
+    hMutex = CreateMutexW(NULL, TRUE, L"trcmon_mutex");
     if (hMutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
     {
         /* Cleanup and exit */
-        //if (hMutex) CloseHandle(hMutex);
-        //return 0;
+        if (hMutex) CloseHandle(hMutex);
+        return 0;
     }
 
     /* Store the global values */

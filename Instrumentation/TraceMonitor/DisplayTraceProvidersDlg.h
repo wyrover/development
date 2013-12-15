@@ -2,7 +2,7 @@
 class CDisplayTraceProvidersDlg
 {
 private:
-    HWND m_hTreeView;
+    HWND m_hListView;
     WCHAR m_SessionName[1024];
     GUID m_TraceGuid;
 
