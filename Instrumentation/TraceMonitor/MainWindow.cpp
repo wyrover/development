@@ -430,9 +430,22 @@ CMainWindow::OnCommand(WPARAM wParam,
         case IDC_DEVBYTYPE:
         {
             CDisplayTraceProvidersDlg TraceProvDlg;
+            CSelectedTrace *SelectedTrace;
 
             TraceProvDlg.ShowDialog(m_hMainWnd);
-            LPCWSTR test = TraceProvDlg.GetSessionName();
+            
+            int count = TraceProvDlg.GetSelectedCount();
+            for (int i = 0; i < count; i++)
+            {
+                SelectedTrace = TraceProvDlg.GetSelectedItem(i);
+                if (SelectedTrace)
+                {
+                    MessageBoxW(NULL, SelectedTrace->m_SessionName, NULL, MB_OK);
+                    delete SelectedTrace;
+                }
+                
+            }
+
             break;
         }
 

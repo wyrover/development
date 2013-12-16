@@ -7,13 +7,21 @@
 CDisplayTraceProvidersDlg::CDisplayTraceProvidersDlg(void) :
     m_hListView(NULL)
 {
-    ZeroMemory(m_SessionName, _countof(m_SessionName));
-    ZeroMemory(&m_TraceGuid, sizeof(GUID));
+
 }
 
 
 CDisplayTraceProvidersDlg::~CDisplayTraceProvidersDlg(void)
 {
+}
+
+CSelectedTrace*
+CDisplayTraceProvidersDlg::GetSelectedItem(int item)
+{
+    if (item > (int)m_SelectedItems.size())
+        return nullptr;
+
+    return new CSelectedTrace(m_SelectedItems.at(item));
 }
 
 BOOL
@@ -122,26 +130,26 @@ CDisplayTraceProvidersDlg::WndProc(HWND hwnd,
             { 
                 case IDOK:
                 {
-                    //HTREEITEM hTreeItem;
-                    //TVITEM TvItem;
-                    //WCHAR Buffer[1024];
+                    This->m_SelectedItems.clear();
 
-                    //hTreeItem = TreeView_GetSelection(This->m_hTreeView);
-                    //if (hTreeItem)
-                    //{
-                    //    ZeroMemory(&TvItem, sizeof(TVITEM));
-                    //    TvItem.mask = TVIF_TEXT | TVIF_PARAM;
-                    //    TvItem.hItem = hTreeItem;
-                    //    TvItem.pszText = Buffer;
-                    //    TvItem.cchTextMax = 1024;
+                    for(int item = ListView_GetNextItem(This->m_hListView, -1, LVNI_SELECTED);
+                        item >= 0;
+                        item = ListView_GetNextItem(This->m_hListView, item, LVNI_SELECTED))
+                    {
+                        LVITEM lvi = {0};
+                        CSelectedTrace SelectedTrace;
 
-                    //    if (TreeView_GetItem(This->m_hTreeView, &TvItem))
-                    //    {
-                    //        wcscpy_s(This->m_SessionName, 1024, TvItem.pszText);
-                    //        CopyMemory(&This->m_TraceGuid, (LPVOID)TvItem.lParam, sizeof(GUID));
+                        lvi.iItem = item;
+                        lvi.mask = LVIF_TEXT | LVIF_PARAM;
+                        lvi.pszText = SelectedTrace.m_SessionName;
+                        lvi.cchTextMax = 1024;
 
-                    //    }
-                    //}
+                        if (ListView_GetItem(This->m_hListView, &lvi))
+                        {
+                            CopyMemory(&SelectedTrace.m_TraceGuid, (LPVOID)lvi.lParam, sizeof(GUID));
+                            This->m_SelectedItems.push_back(SelectedTrace);
+                        }
+                    }
                 }
                 // fall through
                 case IDCANCEL:
