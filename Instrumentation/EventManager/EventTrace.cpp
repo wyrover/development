@@ -3,9 +3,9 @@
 #include <Objbase.h>
 
 CEventTrace::CEventTrace(void) :
-    m_TraceHandle(NULL)
+    m_TraceHandle(NULL),
+    m_EventTraceProperties(NULL)
 {
-    ZeroMemory(&m_EventTraceProperties, sizeof(EVENT_TRACE_PROPERTIES));
 }
 
 CEventTrace::~CEventTrace(void)
@@ -33,16 +33,21 @@ CEventTrace::Create(_In_z_ wstring TraceName,
 }
 
 DWORD
-CEventTrace::AddTraceProvider(_In_ GUID &TraceGuid)
+CEventTrace::AddTraceProvider(_In_ GUID &ProviderGuid,
+                              _In_ DWORD KeywordsAny,
+                              _In_ DWORD KeywordsAll,
+                              _In_ DWORD Level,
+                              _In_ DWORD Properties,
+                              _In_z_ wstring Filter)
 {
     std::vector<GUID>::iterator it;
 
     // Check that this provider doesn't already exist
-    it = std::find(m_TraceProviders.begin(), m_TraceProviders.end(), TraceGuid);
+    it = std::find(m_TraceProviders.begin(), m_TraceProviders.end(), ProviderGuid);
     if (it == m_TraceProviders.end())
     {
         // Add it
-        m_TraceProviders.push_back(TraceGuid);
+        m_TraceProviders.push_back(ProviderGuid);
         return ERROR_SUCCESS;
     }
 
@@ -64,4 +69,19 @@ CEventTrace::DeleteTraceProvider(_In_ GUID &TraceGuid)
     }
 
     return ERROR_NOT_FOUND;
+}
+
+DWORD
+CEventTrace::SetTraceBuffers(_In_ DWORD BufferSize,
+                             _In_ DWORD MinimumBuffers,
+                             _In_ DWORD MaximumBuffers)
+{
+
+}
+
+DWORD
+CEventTrace::SetStreamMode(_In_ StreamMode eStreamMode,
+                           _In_ FileInformation *fileInformation)
+{
+
 }
