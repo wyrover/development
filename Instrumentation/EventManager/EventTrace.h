@@ -16,14 +16,15 @@ struct FileInformation
     bool Circular;
 };
 
+class TraceProvider;
+
 
 class CEventTrace
 {
 private:
     wstring m_TraceName;
-    wstring m_RootDirectory;
     GUID m_TraceSession;
-    vector<GUID> m_TraceProviders; //enabletrace
+    std::vector<TraceProvider *> m_TraceProviders; //enabletrace
     PEVENT_TRACE_PROPERTIES m_EventTraceProperties;
     TRACEHANDLE m_TraceHandle;
     DWORD m_LoggerThreadId;
@@ -33,8 +34,7 @@ public:
     ~CEventTrace(void);
 
     DWORD Create(
-        _In_z_ wstring TraceName,
-        _In_z_ wstring RootDirectory
+        _In_z_ wstring TraceName
         );
 
     DWORD AddTraceProvider(
@@ -59,6 +59,13 @@ public:
     DWORD SetStreamMode(
         _In_ StreamMode eStreamMode,
         _In_ FileInformation *fileInformation
+        );
+
+private:
+    DWORD GetProvider(
+        _In_ GUID &ProviderGuid,
+        _In_ bool Remove,
+        _Out_ TraceProvider **Provider
         );
 };
 
