@@ -14,6 +14,7 @@
     <ProjectGuid>{D9170D63-49F8-4850-8025-A4EF09AAF245}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>EventManager</RootNamespace>
+    <ProjectName>TraceManagerLib</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -74,11 +75,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ControlTrace.c" />
-    <ClCompile Include="EventTrace.cpp" />
+    <ClCompile Include="TraceManager.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="EventTrace.h" />
+    <ClInclude Include="TraceManager.h" />
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
