@@ -81,7 +81,7 @@ CDisplayTraceProvidersDlg::WndProc(HWND hwnd,
                                    WPARAM wParam,
                                    LPARAM lParam)
 {
-    CDisplayTraceProvidersDlg *This = (CDisplayTraceProvidersDlg *)lParam;
+    CDisplayTraceProvidersDlg *This = NULL;
     HANDLE hEnumThread;
 
     /* Get the object pointer from window context */

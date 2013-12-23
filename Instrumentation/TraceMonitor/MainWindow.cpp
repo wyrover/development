@@ -1,7 +1,7 @@
 #include "StdAfx.h"
 #include "devmgmt.h"
 #include "MainWindow.h"
-#include "DisplayTraceProvidersDlg.h"
+#include "CreateTraceSessionDlg.h"
 #include "AboutDlg.h"
 
 /* DATA *****************************************************/
@@ -429,23 +429,8 @@ CMainWindow::OnCommand(WPARAM wParam,
 
         case IDC_DEVBYTYPE:
         {
-            CDisplayTraceProvidersDlg TraceProvDlg;
-            CSelectedTrace *SelectedTrace;
-
-            TraceProvDlg.ShowDialog(m_hMainWnd);
-            
-            int count = TraceProvDlg.GetSelectedCount();
-            for (int i = 0; i < count; i++)
-            {
-                SelectedTrace = TraceProvDlg.GetSelectedItem(i);
-                if (SelectedTrace)
-                {
-                    MessageBoxW(NULL, SelectedTrace->m_SessionName, NULL, MB_OK);
-                    delete SelectedTrace;
-                }
-                
-            }
-
+            CCreateTraceSessionDlg TraceSessionDlg;
+            TraceSessionDlg.ShowDialog(m_hMainWnd);
             break;
         }
 
