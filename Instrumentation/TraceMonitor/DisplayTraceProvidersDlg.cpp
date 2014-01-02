@@ -7,9 +7,7 @@
 CDisplayTraceProvidersDlg::CDisplayTraceProvidersDlg(void) :
     m_hListView(NULL)
 {
-
 }
-
 
 CDisplayTraceProvidersDlg::~CDisplayTraceProvidersDlg(void)
 {
@@ -21,7 +19,7 @@ CDisplayTraceProvidersDlg::GetSelectedItem(int item)
     if (item > (int)m_SelectedItems.size())
         return nullptr;
 
-    return new CSelectedTrace(m_SelectedItems.at(item));
+    return &m_SelectedItems.at(item);
 }
 
 BOOL
@@ -55,8 +53,6 @@ CDisplayTraceProvidersDlg::EnumProvidersThread(_In_opt_ LPVOID lpParam)
 
             for (DWORD i = 0; i < pBuffer->NumberOfProviders; i++)
             {
-                //printf("%S  (%lu)\n", (PBYTE)pBuffer + pBuffer->TraceProviderInfoArray[i].ProviderNameOffset, pBuffer->TraceProviderInfoArray[i].SchemaSource);
-
                 LVITEM lvi = {0};
                 lvi.mask = LVIF_TEXT | LVIF_PARAM;
                 lvi.pszText = (LPWSTR)((PBYTE)pBuffer + pBuffer->TraceProviderInfoArray[i].ProviderNameOffset);
@@ -65,8 +61,6 @@ CDisplayTraceProvidersDlg::EnumProvidersThread(_In_opt_ LPVOID lpParam)
 
                 ii = ListView_InsertItem(This->m_hListView, &lvi);
             }
-
-            //TreeView_SortChildren(This->m_hTreeView, TVI_ROOT, FALSE);
         }
 
         //HeapFree(GetProcessHeap(), 0, pBuffer);
@@ -92,7 +86,6 @@ CDisplayTraceProvidersDlg::WndProc(HWND hwnd,
         return FALSE;
 
 
-
    switch (msg)
     { 
         case WM_INITDIALOG:
@@ -111,6 +104,8 @@ CDisplayTraceProvidersDlg::WndProc(HWND hwnd,
             lvc.cx = 300;
 
             ListView_InsertColumn(This->m_hListView, 0, &lvc);
+
+            ListView_SetExtendedListViewStyle(This->m_hListView, LVS_EX_FULLROWSELECT);
             }
             hEnumThread = (HANDLE)_beginthreadex(NULL,
                                                  0,
@@ -141,12 +136,12 @@ CDisplayTraceProvidersDlg::WndProc(HWND hwnd,
 
                         lvi.iItem = item;
                         lvi.mask = LVIF_TEXT | LVIF_PARAM;
-                        lvi.pszText = SelectedTrace.m_SessionName;
+                        lvi.pszText = SelectedTrace.SessionName;
                         lvi.cchTextMax = 1024;
 
                         if (ListView_GetItem(This->m_hListView, &lvi))
                         {
-                            CopyMemory(&SelectedTrace.m_TraceGuid, (LPVOID)lvi.lParam, sizeof(GUID));
+                            CopyMemory(&SelectedTrace.TraceGuid, (LPVOID)lvi.lParam, sizeof(GUID));
                             This->m_SelectedItems.push_back(SelectedTrace);
                         }
                     }

@@ -430,7 +430,10 @@ CMainWindow::OnCommand(WPARAM wParam,
         case IDC_DEVBYTYPE:
         {
             CCreateTraceSessionDlg TraceSessionDlg;
-            TraceSessionDlg.ShowDialog(m_hMainWnd);
+            if (TraceSessionDlg.ShowDialog(m_hMainWnd))
+            {
+                m_TraceSessions.push_back(TraceSessionDlg.GetNewTraceSession());
+            }
             break;
         }
 

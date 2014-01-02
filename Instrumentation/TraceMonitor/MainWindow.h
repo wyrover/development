@@ -1,5 +1,6 @@
 #pragma once
 #include "TraceView.h"
+#include "TraceSession.h"
 
 typedef struct _MENU_HINT
 {
@@ -17,6 +18,8 @@ class CMainWindow
     HIMAGELIST m_ToolbarhImageList;
     HMENU m_hMenu;
     int m_CmdShow;
+
+    std::vector<CTraceSession *> m_TraceSessions; //fixme: this should be linked to tabs or something
 
 private:
     static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);

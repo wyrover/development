@@ -1,11 +1,5 @@
 #pragma once
-
-enum StreamMode
-{
-    File,
-    RealTime,
-    FileAndRealTime
-};
+#include <TraceManagerLib.h>
 
 struct FileInformation
 {
@@ -15,8 +9,8 @@ struct FileInformation
     bool Circular;
 };
 
-class TraceProvider;
 
+class TraceProvider;
 
 class CTraceManager
 {
@@ -34,16 +28,17 @@ public:
     ~CTraceManager(void);
 
     DWORD Create(
-        _In_z_ wstring TraceName
+        _In_z_ LPWSTR TraceName,
+        _In_z_ LPWSTR TraceDirectory
         );
 
     DWORD AddTraceProvider(
         _In_ GUID &ProviderGuid,
-        _In_ DWORD KeywordsAny,
-        _In_ DWORD KeywordsAll,
+        _In_ ULONGLONG KeywordsAny,
+        _In_ ULONGLONG KeywordsAll,
         _In_ DWORD Level,
         _In_ DWORD Properties,
-        _In_z_ wstring Filter
+        _In_z_ LPWSTR Filter
         );
 
     DWORD DeleteTraceProvider(

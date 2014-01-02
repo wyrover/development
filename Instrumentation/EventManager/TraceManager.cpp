@@ -1,22 +1,21 @@
 #include "stdafx.h"
 #include "TraceManager.h"
-#include <Objbase.h>
 
 
 class TraceProvider
 {
 public:
     GUID ProviderGuid;
-    DWORD KeywordsAny;
-    DWORD KeywordsAll;
+    ULONGLONG KeywordsAny;
+    ULONGLONG KeywordsAll;
     DWORD Level;
     DWORD Properties;
     wstring Filter;
 
     TraceProvider(
         _In_ GUID _ProviderGuid,
-        _In_ DWORD _KeywordsAny,
-        _In_ DWORD _KeywordsAll,
+        _In_ ULONGLONG _KeywordsAny,
+        _In_ ULONGLONG _KeywordsAll,
         _In_ DWORD _Level,
         _In_ DWORD _Properties,
         _In_ wstring _Filter) :
@@ -44,7 +43,8 @@ CTraceManager::~CTraceManager(void)
 }
 
 DWORD
-CTraceManager::Create(_In_z_ wstring TraceName)
+CTraceManager::Create(_In_z_ LPWSTR TraceName,
+                      _In_z_ LPWSTR TraceDirectory)
 {
     // Copy the name and dir
     m_TraceName = TraceName;
@@ -57,15 +57,18 @@ CTraceManager::Create(_In_z_ wstring TraceName)
     // Bail if we failed to create the guid
     if (FAILED(hr)) return HRESULT_CODE(hr);
 
+    m_FileInformation.LogFileame = TraceName;
+    m_FileInformation.LogFileDirectory = TraceDirectory;
+
     // Set the string sizes
-    size_t LoggerNameSize = (TraceName.size() + 1) * sizeof(wchar_t);
+    size_t LoggerNameSize = (m_TraceName.size() + 1) * sizeof(wchar_t);
     size_t LogFileNameSize = MAX_PATH * sizeof(wchar_t);
 
     // Allocate the memory
     size_t BufferSize;
     BufferSize = sizeof(EVENT_TRACE_PROPERTIES) + LoggerNameSize + LogFileNameSize;
     m_EventTraceProperties = (PEVENT_TRACE_PROPERTIES)new byte[BufferSize];
-    if (m_EventTraceProperties) return ERROR_NOT_ENOUGH_MEMORY;
+    if (m_EventTraceProperties == nullptr) return ERROR_NOT_ENOUGH_MEMORY;
 
     ZeroMemory(m_EventTraceProperties, BufferSize);
 
@@ -89,19 +92,24 @@ CTraceManager::Create(_In_z_ wstring TraceName)
 
     // Copy the trace name
     CopyMemory((LPWSTR)((byte *)m_EventTraceProperties + m_EventTraceProperties->LoggerNameOffset),
-               TraceName.c_str(),
+               m_TraceName.c_str(),
                LoggerNameSize);
+
+    wstring LogFile = m_FileInformation.LogFileDirectory + L"\\" + m_FileInformation.LogFileame + L".etl";
+    CopyMemory((LPWSTR)((byte *)m_EventTraceProperties + m_EventTraceProperties->LogFileNameOffset),
+               LogFile.c_str(),
+               LogFile.size() * sizeof(wchar_t));
 
     return ERROR_SUCCESS;
 }
 
 DWORD
 CTraceManager::AddTraceProvider(_In_ GUID &ProviderGuid,
-                               _In_ DWORD KeywordsAny,
-                               _In_ DWORD KeywordsAll,
+                               _In_ ULONGLONG KeywordsAny,
+                               _In_ ULONGLONG KeywordsAll,
                                _In_ DWORD Level,
                                _In_ DWORD Properties,
-                               _In_z_ wstring Filter)
+                               _In_z_ LPWSTR Filter)
 {
 
     for (auto Prov : m_TraceProviders)
@@ -112,17 +120,37 @@ CTraceManager::AddTraceProvider(_In_ GUID &ProviderGuid,
         }
     }
 
-    TraceProvider *Provider = new TraceProvider(
-        ProviderGuid,
-        KeywordsAny,
-        KeywordsAll,
-        Level,
-        Properties,
-        Filter);
+    ENABLE_TRACE_PARAMETERS EnableTraceParameters;
+    EnableTraceParameters.Version = ENABLE_TRACE_PARAMETERS_VERSION;
+    EnableTraceParameters.EnableProperty = EVENT_ENABLE_PROPERTY_TS_ID;// | EVENT_ENABLE_PROPERTY_STACK_TRACE;
+    EnableTraceParameters.ControlFlags = 0;
+    EnableTraceParameters.EnableFilterDesc = NULL;
+    CopyMemory(&EnableTraceParameters.SourceId, &m_TraceSessionGuid, sizeof(GUID));
 
-    // Add it
-    m_TraceProviders.push_back(Provider);
-    return ERROR_SUCCESS;
+    DWORD dwError;
+    dwError = EnableTraceEx2(m_TraceHandle,
+                   &ProviderGuid,
+                   0,
+                   0,
+                   KeywordsAny,
+                   KeywordsAll,
+                   0,
+                   &EnableTraceParameters);
+    if (dwError == ERROR_SUCCESS)
+    {
+        TraceProvider *Provider = new TraceProvider(
+                ProviderGuid,
+                KeywordsAny,
+                KeywordsAll,
+                Level,
+                Properties,
+                Filter);
+
+        // Add it
+        m_TraceProviders.push_back(Provider);
+    }
+
+    return dwError;
 }
 
 DWORD

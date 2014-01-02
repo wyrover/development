@@ -10,11 +10,14 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Includes", "Includes", "{B2CD9380-0E9B-403B-B466-DED9715AE1AF}"
 	ProjectSection(SolutionItems) = preProject
 		Includes\sqlite3.h = Includes\sqlite3.h
+		Includes\TraceManagerLib.h = Includes\TraceManagerLib.h
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EventManager", "EventManager\EventManager.vcxproj", "{D9170D63-49F8-4850-8025-A4EF09AAF245}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TraceManagerLib", "EventManager\EventManager.vcxproj", "{D9170D63-49F8-4850-8025-A4EF09AAF245}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TrcMonLib", "TrcMonLib\TrcMonLib.vcxproj", "{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TraceManager", "TraceManager\TraceManager.vcxproj", "{EAE59C22-2712-4345-A154-2CE3D20163B6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -52,6 +55,12 @@ Global
 		{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}.Release|Win32.ActiveCfg = Release|Win32
 		{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}.Release|Win32.Build.0 = Release|Win32
 		{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}.Release|Win32.Deploy.0 = Release|Win32
+		{EAE59C22-2712-4345-A154-2CE3D20163B6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{EAE59C22-2712-4345-A154-2CE3D20163B6}.Debug|Win32.Build.0 = Debug|Win32
+		{EAE59C22-2712-4345-A154-2CE3D20163B6}.Debug|Win32.Deploy.0 = Debug|Win32
+		{EAE59C22-2712-4345-A154-2CE3D20163B6}.Release|Win32.ActiveCfg = Release|Win32
+		{EAE59C22-2712-4345-A154-2CE3D20163B6}.Release|Win32.Build.0 = Release|Win32
+		{EAE59C22-2712-4345-A154-2CE3D20163B6}.Release|Win32.Deploy.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

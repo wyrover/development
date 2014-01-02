@@ -1,20 +1,16 @@
 #pragma once
-#include <vector>
 
-using namespace std;
-
-class CSelectedTrace
+struct CSelectedTrace
 {
-public:
-    WCHAR m_SessionName[1024];
-    GUID m_TraceGuid;
+    WCHAR SessionName[1024];
+    GUID TraceGuid;
 };
 
 class CDisplayTraceProvidersDlg
 {
 private:
     HWND m_hListView;
-    vector<CSelectedTrace> m_SelectedItems;
+    std::vector<CSelectedTrace> m_SelectedItems;
 
 public:
     CDisplayTraceProvidersDlg(void);
