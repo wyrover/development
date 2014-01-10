@@ -31,7 +31,7 @@
     <ClCompile Include="EncryptionDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UcaFilterDriver.cpp">
+    <ClCompile Include="FilterDriver.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -51,7 +51,7 @@
     <ClInclude Include="EncryptionDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="UcaFilterDriver.h">
+    <ClInclude Include="FilterDriver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

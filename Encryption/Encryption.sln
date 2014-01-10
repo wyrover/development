@@ -8,11 +8,14 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Includes", "Includes", "{B2
 		Includes\DriverShared.h = Includes\DriverShared.h
 		Includes\List.h = Includes\List.h
 		Includes\LookasideList.h = Includes\LookasideList.h
+		Includes\UcaRtl.h = Includes\UcaRtl.h
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EncryptionService", "EncryptionService\EncryptionService.vcxproj", "{7B704A2C-98CD-4D5F-9780-0D6AB09DFB92}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EncryptionDriver", "EncryptionDriver\EncryptionDriver.vcxproj", "{EAA0ACEB-F8B6-4031-AD05-942E51803C00}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "library", "library\library.vcxproj", "{F69E341B-86DB-42B7-BE63-450C35E00776}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -114,6 +117,38 @@ Global
 		{EAA0ACEB-F8B6-4031-AD05-942E51803C00}.Win8 Release|x64.ActiveCfg = Win7 Release|x64
 		{EAA0ACEB-F8B6-4031-AD05-942E51803C00}.Win8 Release|x64.Build.0 = Win7 Release|x64
 		{EAA0ACEB-F8B6-4031-AD05-942E51803C00}.Win8 Release|x64.Deploy.0 = Win7 Release|x64
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Debug|Win32.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Debug|Win32.Build.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Debug|Win32.Deploy.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Debug|x64.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Release|Win32.ActiveCfg = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Release|Win32.Build.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Release|Win32.Deploy.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Release|x64.ActiveCfg = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Debug|Win32.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Debug|Win32.Build.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Debug|Win32.Deploy.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Debug|x64.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Release|Win32.ActiveCfg = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Release|Win32.Build.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Release|Win32.Deploy.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Vista Release|x64.ActiveCfg = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Debug|Win32.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Debug|Win32.Build.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Debug|Win32.Deploy.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Debug|x64.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Release|Win32.ActiveCfg = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Release|Win32.Build.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Release|Win32.Deploy.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win7 Release|x64.ActiveCfg = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Debug|Win32.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Debug|Win32.Build.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Debug|Win32.Deploy.0 = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Debug|x64.ActiveCfg = Debug|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Release|Win32.ActiveCfg = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Release|Win32.Build.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Release|Win32.Deploy.0 = Release|Win32
+		{F69E341B-86DB-42B7-BE63-450C35E00776}.Win8 Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

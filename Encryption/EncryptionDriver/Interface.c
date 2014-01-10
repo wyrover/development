@@ -58,82 +58,19 @@ CONST FLT_REGISTRATION FilterRegistration =
     Contexts,                               //  ContextRegistration
     Callbacks,                              //  Operation callbacks
     UcaFilterUnload,                        //  FilterUnload
-    UcaInstanceSetup,                       //  InstanceSetup
+    NULL, //UcaInstanceSetup,                       //  InstanceSetup
     NULL,                                   //  InstanceQueryTeardown
     NULL,                                   //  InstanceTeardownStart
     NULL,                                   //  InstanceTeardownComplete
     NULL,                                   //  GenerateFileName
     NULL,                                   //  GenerateDestinationFileName
     NULL,                                   //  NormalizeNameComponent
-    UcaTransactionNotificationCallback,     //  TransactionNotification
+    NULL, //UcaTransactionNotificationCallback,     //  TransactionNotification
     NULL                                    //  NormalizeNameComponentEx
 };
 
 
 /* FUNCTIONS **********************************************/
-
-FLT_PREOP_CALLBACK_STATUS
-FLTAPI
-UcaFltDriverPreOperation(_Inout_ PFLT_CALLBACK_DATA Data,
-                         _In_ PCFLT_RELATED_OBJECTS FltObjects,
-                         _Outptr_result_maybenull_ PVOID *CompletionContext)
-{
-    FLT_PREOP_CALLBACK_STATUS Status;
-    PFLT_IO_PARAMETER_BLOCK Iopb = Data->Iopb;
-
-    switch (Iopb->MajorFunction)
-    {
-    case IRP_MJ_CREATE:
-        Status = UcaFilterPreCreate(Data, FltObjects, CompletionContext);
-        break;
-
-    case IRP_MJ_SET_INFORMATION:
-        Status = UcaFilterPreSetInfo(Data, FltObjects, CompletionContext);
-        break;
-
-    case IRP_MJ_CLEANUP:
-        Status = UcaFilterPreCleanup(Data, FltObjects, CompletionContext);
-        break;
-
-    default:
-        Status = FLT_PREOP_SUCCESS_NO_CALLBACK;
-        break;
-    }
-
-    return Status;
-}
-
-FLT_POSTOP_CALLBACK_STATUS
-FLTAPI
-UcaFltDriverPostOperation(_Inout_ PFLT_CALLBACK_DATA Data,
-                          _In_ PCFLT_RELATED_OBJECTS FltObjects,
-                          _In_opt_ PVOID CompletionContext,
-                          _In_ FLT_POST_OPERATION_FLAGS Flags)
-{
-    FLT_POSTOP_CALLBACK_STATUS Status;
-    PFLT_IO_PARAMETER_BLOCK Iopb = Data->Iopb;
-
-    switch (Iopb->MajorFunction)
-    {
-    case IRP_MJ_CREATE:
-        Status = UcaFilterPostCreate(Data, FltObjects, CompletionContext, Flags);
-        break;
-
-    case IRP_MJ_SET_INFORMATION:
-        Status = UcaFilterPostSetInfo(Data, FltObjects, CompletionContext, Flags);
-        break;
-
-    case IRP_MJ_CLEANUP:
-        Status = UcaFilterPostCleanup(Data, FltObjects, CompletionContext, Flags);
-        break;
-
-    default:
-        Status = FLT_POSTOP_FINISHED_PROCESSING;
-        break;
-    }
-
-    return FLT_POSTOP_FINISHED_PROCESSING;
-}
 
 static
 NTSTATUS
@@ -148,7 +85,7 @@ HandleSetNotifyState(_In_ PCLIENT_CONNECTION ClientConnection,
     __try
     {
         /* Set the listen state */
-        ClientConnection->IsListening = PtrToBoolean(((PUCA_FLT_HEADER)InputBuffer)->Buffer);
+        ClientConnection->IsListening = PtrToBoolean(((PCUSPIS_ENCRYPT_HEADER)InputBuffer)->Buffer);
         Status = STATUS_SUCCESS;
     }
     __except (ExceptionFilter(GetExceptionInformation(), TRUE))
@@ -191,20 +128,52 @@ HandleGetNotificationBuffer(_In_ PCLIENT_CONNECTION ClientConnection,
     }
 #endif
 
-    /* Fill the output buffer with file notifications */
-    //Status = GetFileNotifications(ClientConnection,
-    //                                OutputBuffer,
-    //                                OutputBufferLength,
-    //                                ReturnOutputBufferLength);
-    //if (NT_SUCCESS(Status))
-    //{
-
-    //}
-
     return STATUS_SUCCESS;
 }
 
 
+//HANDLE ThreadHandle = NULL;
+//
+//VOID
+//EventHandlerThread(__in PVOID pContext)
+//{
+//    PCUSPIS_ENCRYPT_NOTIFICATION EncryptNotification;
+//    ULONG BufferSize;
+//    NTSTATUS Status;
+//    LARGE_INTEGER x;
+//    int i;
+//    __debugbreak();
+//    for (i = 0; i < 5; i++)
+//    {
+//        BufferSize = sizeof(CUSPIS_ENCRYPT_NOTIFICATION) + sizeof(L"test");
+//        EncryptNotification = (PCUSPIS_ENCRYPT_NOTIFICATION)ExAllocatePoolWithTag(PagedPool,
+//                                                                                  BufferSize,
+//                                                                                  UCA_POOL_TAG);
+//        if (EncryptNotification == NULL) return;
+//
+//        RtlZeroMemory(EncryptNotification, BufferSize);
+//        EncryptNotification->Cookie = EncryptNotification;
+//        EncryptNotification->Irp = IRP_MJ_CREATE;
+//        EncryptNotification->File = (LPWSTR)(EncryptNotification + 1);
+//        RtlCopyMemory(EncryptNotification->File, L"test", sizeof(L"test"));
+//        //EncryptNotification->File[FileNameInfo->Name.Length / sizeof(WCHAR)] = UNICODE_NULL;
+//
+//        Status = FltSendMessage(DriverData.FilterHandle,
+//                                &g_ClientConnection.ClientPort,
+//                                EncryptNotification,
+//                                BufferSize,
+//                                NULL,
+//                                0,
+//                                NULL);
+//
+//        ExFreePoolWithTag(EncryptNotification, UCA_POOL_TAG);
+//
+//        x.QuadPart = 100000000I64; // wait 10 seconds
+//        KeDelayExecutionThread(KernelMode, FALSE, &x);
+//    }
+//
+//    ZwClose(ThreadHandle);
+//}
 
 // This is called when user-mode connects to the server port
 NTSTATUS
@@ -215,9 +184,8 @@ UcaConnect(_In_ PFLT_PORT ClientPort,
            _In_ ULONG SizeOfContext,
            _Outptr_result_maybenull_ PVOID *ConnectionPortCookie)
 {
-    PCLIENT_CONNECTION ClientConnection;
     NTSTATUS Status;
-
+    __debugbreak();
     PAGED_CODE();
     TRACE_ENTER(TraceHandle);
 
@@ -225,8 +193,28 @@ UcaConnect(_In_ PFLT_PORT ClientPort,
     UNREFERENCED_PARAMETER(ConnectionContext);
     UNREFERENCED_PARAMETER(SizeOfContext);
 
+    RtlZeroMemory(&g_ClientConnection, sizeof(CLIENT_CONNECTION));
+    g_ClientConnection.ClientPort = ClientPort;
+    g_ClientConnection.ConnectionCookie = &g_ClientConnection;
+    g_ClientConnection.UserProcess = PsGetCurrentProcess();
+    g_ClientConnection.UserThread = PsGetCurrentThread();
+    g_ClientConnection.RefCount = 1;
+
+    /* Create a terminate event */
+    KeInitializeEvent(&g_ClientConnection.ClientTerminating,
+                      NotificationEvent,
+                      FALSE);
+
     /* Set the connection cookie to be the address of the client descriptor */
     *ConnectionPortCookie = &g_ClientConnection;
+
+    //Status = PsCreateSystemThread(&ThreadHandle,
+    //                              THREAD_ALL_ACCESS,
+    //                              NULL,
+    //                              0,
+    //                              NULL,
+    //                              EventHandlerThread,
+    //                              NULL);
 
     TRACE_EXIT(TraceHandle);
 
@@ -238,11 +226,13 @@ VOID
 FLTAPI
 UcaDisconnect(_In_opt_ PVOID ConnectionCookie)
 {
-    PCLIENT_CONNECTION ClientConnection;
     NTSTATUS Status;
-
+    __debugbreak();
     PAGED_CODE();
     TRACE_ENTER(TraceHandle);
+
+    /* Close the handle to the client */
+    FltCloseClientPort(DriverData.FilterHandle, &g_ClientConnection.ClientPort);
 
     TRACE_EXIT(TraceHandle);
 }
@@ -256,21 +246,21 @@ UcaMessage(_In_opt_ PVOID ConnectionCookie,
            _In_ ULONG OutputBufferLength,
            _Out_ PULONG ReturnOutputBufferLength)
 {
-    UCA_FLT_COMMAND Message;
+    CUSPIS_ENCRYPT_COMMAND Message;
     NTSTATUS Status;
-
+    __debugbreak();
     TRACE_ENTER(TraceHandle);
 
     PAGED_CODE();
 
     /* Sanity check */
-    if (!InputBuffer || (InputBufferLength < sizeof(UCA_FLT_HEADER)))
+    if (!InputBuffer || (InputBufferLength < sizeof(CUSPIS_ENCRYPT_HEADER)))
         return STATUS_INVALID_PARAMETER;
 
     __try
     {
         /* Store the message in a safe buffer */
-        Message = ((PUCA_FLT_HEADER)InputBuffer)->Message;
+        Message = ((PCUSPIS_ENCRYPT_HEADER)InputBuffer)->Message;
     }
     __except (ExceptionFilter(GetExceptionInformation(), TRUE))
     {
@@ -287,7 +277,7 @@ UcaMessage(_In_opt_ PVOID ConnectionCookie,
                                           InputBufferLength);
             break;
 
-        case GetNotificationBuffer:
+        case GetNotification:
             Status = HandleGetNotificationBuffer(&g_ClientConnection,
                                                  OutputBuffer,
                                                  OutputBufferLength,
@@ -314,13 +304,13 @@ UcaInstanceSetup(_In_ PCFLT_RELATED_OBJECTS FltObjects,
 {
     BOOLEAN IsWritable = FALSE;
     NTSTATUS Status;
-
+    __debugbreak();
     TRACE_ENTER(TraceHandle);
 
     UNREFERENCED_PARAMETER(FltObjects);
     UNREFERENCED_PARAMETER(Flags);
     PAGED_CODE();
-
+    
     TRACE_INFO(TraceHandle, "%lu, %lu", VolumeDeviceType, VolumeFilesystemType);
 
     /* Ignore read only volumes */
@@ -350,7 +340,7 @@ FLTAPI
 UcaFilterUnload(_In_ FLT_FILTER_UNLOAD_FLAGS Flags)
 {
     TRACE_ENTER(TraceHandle);
-
+    __debugbreak();
     UNREFERENCED_PARAMETER(Flags);
     PAGED_CODE();
 

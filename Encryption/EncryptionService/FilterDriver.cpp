@@ -9,30 +9,36 @@
 #include "StdAfx.h"
 //#include "EventEngine.h"
 #include <Fltuser.h>
-#include "UcaFilterDriver.h"
-#include "DriverShared.h"
+#include "FilterDriver.h"
+
 //#include "UcaLogging.h"
 //#include "UcaDebug.h"
 
 /* DATA *******************************************************/
 
+#define LIST_BUFFER_SIZE    1024
 
 /* PUBLIC METHODS *********************************************/
 
-CUcaFilterDriver::CUcaFilterDriver(void) :
-    m_hPort(NULL)
+CUcaFilterDriver::CUcaFilterDriver(LPWSTR lpDriverName) :
+    m_hPort(NULL),
+    m_FilterMessageList(nullptr)
 {
     /* Store the driver name */
-    wcscpy_s(m_szDriverName, MAX_PATH, ENC_DRIVER_NAME);
+    wcscpy_s(m_szDriverName, MAX_PATH, lpDriverName);
+    
+    m_FilterMessageList = new CLookasideList(LIST_BUFFER_SIZE);
 }
 
 CUcaFilterDriver::~CUcaFilterDriver(void)
 {
     //UCAASSERT(m_hPort == NULL);
+
+    delete m_FilterMessageList;
 }
 
 DWORD
-CUcaFilterDriver::Start()
+CUcaFilterDriver::Load()
 {
     HRESULT hResult;
     DWORD dwError = 0;
@@ -68,7 +74,7 @@ CUcaFilterDriver::Start()
 }
 
 DWORD
-CUcaFilterDriver::Stop()
+CUcaFilterDriver::Unload()
 {
     HRESULT hResult;
     DWORD dwError = ERROR_SUCCESS;
@@ -104,7 +110,10 @@ CUcaFilterDriver::Connect(void)
 
     /* Check we aren't already connected */
     if (m_hPort) return ERROR_SUCCESS;
-    //__debugbreak();
+
+    m_hTerminate = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (m_hTerminate == NULL) return GetLastError();
+
     /* Connect to the filter driver */
     hResult = FilterConnectCommunicationPort(m_szDriverName,
                                              0,
@@ -114,12 +123,11 @@ CUcaFilterDriver::Connect(void)
                                              &m_hPort);
     if (hResult != S_OK)
     {
-        switch (hResult)
-        {
-        default:
-            dwError = SCODE_CODE(hResult);
-            break;
-        }
+        dwError = SCODE_CODE(hResult);
+
+        CloseHandle(m_hTerminate);
+        m_hTerminate = NULL;
+
 
         //TRACE_ERROR(TraceHandle, "Failed to connect to the filter driver : %lu", dwError);
 
@@ -143,6 +151,13 @@ CUcaFilterDriver::Disconnect()
     /* Check that the port is valid */
     if (m_hPort == NULL) return ERROR_SUCCESS;
 
+    if (m_hTerminate)
+    {
+        SetEvent(m_hTerminate);
+        CloseHandle(m_hTerminate);
+        m_hTerminate = NULL;
+    }
+
     /* Close the port handle */
     if (CloseHandle(m_hPort))
     {
@@ -161,6 +176,179 @@ CUcaFilterDriver::Disconnect()
 
 
 /* PRIVATE METHODS *******************************************************/
+
+DWORD
+CUcaFilterDriver::SendFilterMessage(_In_reads_bytes_(dwInBufferSize) LPVOID lpInBuffer,
+                                    _In_ DWORD dwInBufferSize,
+                                    _Out_writes_bytes_to_opt_(dwOutBufferSize,*lpBytesReturned) LPVOID lpOutBuffer,
+                                    _In_ DWORD dwOutBufferSize,
+                                    _Out_ LPDWORD lpBytesReturned)
+{
+    HRESULT hResult;
+
+    hResult = FilterSendMessage(m_hPort,
+                                lpInBuffer,
+                                dwInBufferSize,
+                                lpOutBuffer,
+                                dwOutBufferSize,
+                                lpBytesReturned);
+    if (hResult != S_OK)
+    {
+        //TRACE_ERROR(TraceHandle, "Failed to send a query message to the driver : %X", hResult);
+        return SCODE_CODE(hResult);
+    }
+
+    return 0;
+}
+
+DWORD CUcaFilterDriver::GetFilterMessage(_Out_writes_bytes_(dwMessageBufferSize) PVOID lpMessageBuffer,
+                                         _In_ DWORD dwMessageBufferSize,
+                                         _Out_ LPDWORD lpBytesReceived,
+                                         _Inout_opt_ LPOVERLAPPED lpOverlapped)
+{
+    PFILTER_MESSAGE_HEADER FilterMessageHeader;
+    HANDLE WaitHandles[2];
+    DWORD BufferSize;
+    BOOL UsingLinkedList;
+    HRESULT hResult;
+    PBYTE ptr;
+    DWORD dwError;
+
+    *lpBytesReceived = 0;
+
+    BufferSize = dwMessageBufferSize + sizeof(FILTER_MESSAGE_HEADER);
+
+    if (BufferSize < LIST_BUFFER_SIZE)
+    {
+        FilterMessageHeader = (PFILTER_MESSAGE_HEADER)m_FilterMessageList->Allocate();
+        UsingLinkedList = TRUE;
+    }
+    else
+    {
+        FilterMessageHeader = (PFILTER_MESSAGE_HEADER)HeapAlloc(GetProcessHeap(), 0, BufferSize);
+        UsingLinkedList = FALSE;
+    }
+
+    if (FilterMessageHeader == NULL) return ERROR_NOT_ENOUGH_MEMORY;
+
+    ZeroMemory(FilterMessageHeader, BufferSize);
+
+    hResult = FilterGetMessage(m_hPort,
+                               FilterMessageHeader,
+                               BufferSize,
+                               lpOverlapped);
+    dwError = SCODE_CODE(hResult);
+
+    if (dwError == ERROR_IO_PENDING)
+    {
+        WaitHandles[0] = lpOverlapped->hEvent; //m_hPort
+        WaitHandles[1] = m_hTerminate;
+
+        dwError = WaitForMultipleObjects(2, WaitHandles, FALSE, INFINITE);
+        if (dwError == WAIT_OBJECT_0)
+        {
+            //TRACE_INFO(TraceHandle, "The session %lu client event has fired", m_SessionId);
+            if (!GetOverlappedResult(m_hPort, lpOverlapped, lpBytesReceived, FALSE))
+            {
+                dwError = GetLastError();
+            }
+        }
+        else if (dwError == WAIT_OBJECT_0 + 1)
+        {
+            //TRACE_ERROR(TraceHandle, "The session %lu client process exited before event fired", m_SessionId);
+            dwError = ERROR_OPERATION_ABORTED;
+
+            //CancelIoEx(m_hPort, lpOverlapped);
+        }
+        else
+        {
+            /* Did we get a generic fail result? */
+            if (dwError == WAIT_FAILED)
+            {
+                /* Get the real error code */
+                dwError = GetLastError();
+            }
+
+            //TRACE_ERROR(TraceHandle, "Failed to wait for the client to connect : %lu", dwError);
+        }
+    }
+
+    if (dwError == ERROR_SUCCESS)
+    {
+        ptr = (PBYTE)(FilterMessageHeader + 1);
+        CopyMemory(lpMessageBuffer, ptr, dwMessageBufferSize);
+    }
+    else
+    {
+        //TRACE_ERROR(TraceHandle, "Failed to send a query message to the driver : %X", hResult);
+    }
+
+    if (UsingLinkedList)
+    {
+        m_FilterMessageList->Free(FilterMessageHeader);
+    }
+    else
+    {
+        HeapFree(GetProcessHeap(), 0, FilterMessageHeader);
+    }
+
+    return dwError;
+}
+
+DWORD CUcaFilterDriver::ReplyFilterMessage(_In_reads_bytes_(dwReplyBufferSize) PVOID lpReplyBuffer,
+                                           _In_ DWORD dwReplyBufferSize)
+{
+    PFILTER_REPLY_HEADER FilterReplyHeader;
+    DWORD BufferSize;
+    BOOL UsingLinkedList;
+    HRESULT hResult;
+    PBYTE ptr;
+    DWORD dwError;
+
+    BufferSize = dwReplyBufferSize + sizeof(FILTER_REPLY_HEADER);
+
+    if (BufferSize < LIST_BUFFER_SIZE)
+    {
+        FilterReplyHeader = (PFILTER_REPLY_HEADER)m_FilterMessageList->Allocate();
+        UsingLinkedList = TRUE;
+    }
+    else
+    {
+        FilterReplyHeader = (PFILTER_REPLY_HEADER)HeapAlloc(GetProcessHeap(), 0, BufferSize);
+        UsingLinkedList = FALSE;
+    }
+
+    if (FilterReplyHeader == NULL) return ERROR_NOT_ENOUGH_MEMORY;
+
+    ZeroMemory(FilterReplyHeader, BufferSize);
+
+    ptr = (PBYTE)(FilterReplyHeader + 1);
+    CopyMemory(ptr, lpReplyBuffer, dwReplyBufferSize);
+
+    hResult = FilterReplyMessage(m_hPort,
+                                 FilterReplyHeader,
+                                 dwReplyBufferSize);
+    if (hResult == S_OK)
+    {
+        dwError = ERROR_SUCCESS;
+    }
+    else
+    {
+        //TRACE_ERROR(TraceHandle, "Failed to send a query message to the driver : %X", hResult);
+         dwError = SCODE_CODE(hResult);
+    }
+
+    if (UsingLinkedList)
+    {
+        m_FilterMessageList->Free(FilterReplyHeader);
+    }
+    else
+    {
+        HeapFree(GetProcessHeap(), 0, FilterReplyHeader);
+    }
+
+    return 0;
+}
 
 BOOL
 CUcaFilterDriver::IsPathDirectory(_In_ LPWSTR lpPath)
@@ -187,7 +375,6 @@ CUcaFilterDriver::GetVolumeMountPoint(_In_z_ LPWSTR lpPath,
     DWORD PathLength;
     BOOL bSuccess;
     DWORD dwError;
-
 
     /* Alloc enough memory to store the volume mount point */
     PathLength = wcslen(lpPath);
@@ -218,6 +405,7 @@ CUcaFilterDriver::GetVolumeNameFromMountPoint(_In_z_ LPWSTR lpMountPoint,
     return 0;
 }
 
+//fixme: can't we use FilterGetDosName for this??
 DWORD
 CUcaFilterDriver::DosPathToDevicePath(_In_z_ LPWSTR lpDosPath,
                                       _Out_ LPWSTR *lpDevicePath,
@@ -333,87 +521,4 @@ CUcaFilterDriver::DosPathToDevicePath(_In_z_ LPWSTR lpDosPath,
     HeapFree(GetProcessHeap(), 0, DeviceName);
 
     return dwError;
-}
-
-
-
-DWORD
-CUcaFilterDriver::WaitForNotification(_Out_ /*PUCA_NOTIFICATION*/ PVOID *Notification,
-                                      _Out_ LPDWORD lpdwBufferSize)
-{
-#if 0
-    UCA_FLT_QUERY_MESSAGE QueryMessage;
-    UCA_FLT_GET_MESSAGE RequestMessage;
-    UCA_NOTIFICATION_INFO NotificationInfo;
-    DWORD BytesReturned;
-    HRESULT hResult;
-    DWORD dwError;
-
-    TRACE_ENTER(TraceHandle);
-
-    if (!Notification || !lpdwBufferSize) return ERROR_INVALID_PARAMETER;
-
-    *Notification = NULL;
-    *lpdwBufferSize = 0;
-
-    /* Request the next message info */
-    QueryMessage.Header.Message = FLT_GET_NEXT_MESSAGE;
-
-    /* This call blocks, so set the cancel IO event */
-    QueryMessage.Header.hCancelIo = m_hCancelIo;
-
-    /* Send the message to the driver */
-    hResult = FilterSendMessage(m_hPort,
-                                &QueryMessage,
-                                sizeof(UCA_FLT_QUERY_MESSAGE),
-                                &NotificationInfo,
-                                sizeof(UCA_NOTIFICATION_INFO),
-                                &BytesReturned);
-    if (hResult != S_OK)
-    {
-        TRACE_ERROR(TraceHandle, "Failed to send a query message to the driver : %X", hResult);
-        return SCODE_CODE(hResult);
-    }
-
-    TRACE_INFO(TraceHandle, "Handle is %X", NotificationInfo.NotificationHandle);
-    TRACE_INFO(TraceHandle, "Allocating %lu bytes", NotificationInfo.NotificationSize);
-
-    /* Allocate memory to hold the data */
-    *Notification = (PUCA_NOTIFICATION)HeapAlloc(GetProcessHeap(),
-                                                 0,
-                                                 NotificationInfo.NotificationSize);
-    if (*Notification == NULL) return ERROR_NOT_ENOUGH_MEMORY;
-
-    /* Set the header to actually get the message */
-    RequestMessage.Header.Message = FLT_GET_MESSAGE;
-    RequestMessage.Header.hCancelIo = NULL;
-
-    /* Set the handle to the data we want */
-    RequestMessage.NotificationHandle = NotificationInfo.NotificationHandle;
-
-    /* Send the message to the driver */
-    hResult = FilterSendMessage(m_hPort,
-                                &RequestMessage,
-                                sizeof(UCA_FLT_GET_MESSAGE),
-                                *Notification,
-                                NotificationInfo.NotificationSize,
-                                &BytesReturned);
-    if (hResult == S_OK)
-    {
-        /* Store the buffer size */
-        *lpdwBufferSize = NotificationInfo.NotificationSize;
-        dwError = ERROR_SUCCESS;
-    }
-    else
-    {
-        /* Cleanup */
-        TRACE_ERROR(TraceHandle, "Failed to send a get message to the driver : %X", hResult);
-        dwError = SCODE_CODE(hResult);
-        HeapFree(GetProcessHeap(), 0, *Notification);
-        *Notification = NULL;
-    }
-
-    TRACE_EXIT(TraceHandle);
-#endif
-    return 0;//dwError;
 }

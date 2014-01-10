@@ -56,6 +56,73 @@ CONST FLT_OPERATION_REGISTRATION Callbacks[] =
 
 /* PUBLIC FUNCTIONS *********************************************************/
 
+
+FLT_PREOP_CALLBACK_STATUS
+FLTAPI
+UcaFltDriverPreOperation(_Inout_ PFLT_CALLBACK_DATA Data,
+                         _In_ PCFLT_RELATED_OBJECTS FltObjects,
+                         _Outptr_result_maybenull_ PVOID *CompletionContext)
+{
+    FLT_PREOP_CALLBACK_STATUS Status;
+    PFLT_IO_PARAMETER_BLOCK Iopb = Data->Iopb;
+
+    switch (Iopb->MajorFunction)
+    {
+
+    case IRP_MJ_CREATE:
+        Status = UcaFilterPreCreate(Data, FltObjects, CompletionContext);
+        break;
+#if 0
+    case IRP_MJ_SET_INFORMATION:
+        Status = UcaFilterPreSetInfo(Data, FltObjects, CompletionContext);
+        break;
+
+    case IRP_MJ_CLEANUP:
+        Status = UcaFilterPreCleanup(Data, FltObjects, CompletionContext);
+        break;
+#endif
+    default:
+        Status = FLT_PREOP_SUCCESS_NO_CALLBACK;
+        break;
+    }
+
+    return Status;
+}
+
+FLT_POSTOP_CALLBACK_STATUS
+FLTAPI
+UcaFltDriverPostOperation(_Inout_ PFLT_CALLBACK_DATA Data,
+                          _In_ PCFLT_RELATED_OBJECTS FltObjects,
+                          _In_opt_ PVOID CompletionContext,
+                          _In_ FLT_POST_OPERATION_FLAGS Flags)
+{
+    FLT_POSTOP_CALLBACK_STATUS Status;
+    PFLT_IO_PARAMETER_BLOCK Iopb = Data->Iopb;
+
+    switch (Iopb->MajorFunction)
+    {
+
+    case IRP_MJ_CREATE:
+        Status = UcaFilterPostCreate(Data, FltObjects, CompletionContext, Flags);
+        break;
+#if 0
+    case IRP_MJ_SET_INFORMATION:
+        Status = UcaFilterPostSetInfo(Data, FltObjects, CompletionContext, Flags);
+        break;
+
+    case IRP_MJ_CLEANUP:
+        Status = UcaFilterPostCleanup(Data, FltObjects, CompletionContext, Flags);
+        break;
+#endif
+    default:
+        Status = FLT_POSTOP_FINISHED_PROCESSING;
+        break;
+    }
+
+    return Status;
+}
+
+
     // check if file object is a directory
     //Data->Iopb->Parameters.Create.Options == FILE_DIRECTORY_FILE
     // check if the file was requested to be deleted
@@ -70,6 +137,9 @@ UcaFilterPreCreate(_Inout_ PFLT_CALLBACK_DATA Data,
     PUCA_STREAM_CONTEXT StreamContext;
     NTSTATUS Status;
 
+    PCUSPIS_ENCRYPT_NOTIFICATION EncryptNotification;
+    ULONG BufferSize;
+
     PAGED_CODE();
 
     /* Get the full file information. Note: In pre-op the file may not exist but will succeed */
@@ -80,7 +150,34 @@ UcaFilterPreCreate(_Inout_ PFLT_CALLBACK_DATA Data,
         return FLT_PREOP_SUCCESS_NO_CALLBACK;
     }
 
+    BufferSize = sizeof(CUSPIS_ENCRYPT_NOTIFICATION) + FileNameInfo->Name.Length + sizeof(WCHAR);
+    EncryptNotification = (PCUSPIS_ENCRYPT_NOTIFICATION)ExAllocatePoolWithTag(PagedPool,
+                                                                              BufferSize,
+                                                                              UCA_POOL_TAG);
+    if (EncryptNotification == NULL) return FLT_PREOP_SUCCESS_NO_CALLBACK;
 
+    RtlZeroMemory(EncryptNotification, BufferSize);
+    EncryptNotification->Cookie = EncryptNotification;
+    EncryptNotification->Irp = IRP_MJ_CREATE;
+    EncryptNotification->File = (LPWSTR)(EncryptNotification + 1);
+    RtlCopyMemory(EncryptNotification->File, FileNameInfo->Name.Buffer, FileNameInfo->Name.Length);
+    EncryptNotification->File[FileNameInfo->Name.Length / sizeof(WCHAR)] = UNICODE_NULL;
+
+    Status = FltSendMessage(DriverData.FilterHandle,
+                            &g_ClientConnection.ClientPort,
+                            EncryptNotification,
+                            BufferSize,
+                            NULL,
+                            0,
+                            NULL);
+
+    ExFreePoolWithTag(EncryptNotification, UCA_POOL_TAG);
+
+    FltReleaseFileNameInformation(FileNameInfo);
+
+    return FLT_PREOP_SUCCESS_NO_CALLBACK;
+
+#if 0
     /* Look for a quick exit */
     //if (== FALSE)
     //{
@@ -111,6 +208,7 @@ UcaFilterPreCreate(_Inout_ PFLT_CALLBACK_DATA Data,
 
     /* Do all the remaining work in the post-op */
     return FLT_PREOP_SUCCESS_WITH_CALLBACK;
+#endif
 }
 
 FLT_POSTOP_CALLBACK_STATUS

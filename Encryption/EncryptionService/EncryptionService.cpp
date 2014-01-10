@@ -52,7 +52,7 @@ HRESULT CEncryptionServiceModule::PreMessageLoop(_In_ int nShowCmd) throw()
 
 HRESULT CEncryptionServiceModule::PostMessageLoop() throw()
 {
-    m_EncryptionDriver->Initialize();
+    m_EncryptionDriver->Uninitialize();
     delete m_EncryptionDriver;
     m_EncryptionDriver = nullptr;
 
