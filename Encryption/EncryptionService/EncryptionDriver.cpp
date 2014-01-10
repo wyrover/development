@@ -40,7 +40,9 @@ DWORD CEncryptionDriver::Initialize(void)
 
     m_hTerminateEvent = CreateEventW(NULL, FALSE, FALSE, NULL);
 
-    /* Create the listener thread */
+    CreateIoCompletionPort  D:\minifilter examples\Scanner File System Minifilter Driver
+
+    /* Create the listener threads */
     m_hListenThread = (HANDLE)_beginthreadex(NULL,
                                              0,
                                              ListenThread,
