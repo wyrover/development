@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "TraceManager.h"
+#include "TraceProvider.h"
 
 
 class TraceProvider
@@ -10,7 +10,7 @@ public:
     ULONGLONG KeywordsAll;
     DWORD Level;
     DWORD Properties;
-    wstring Filter;
+    std::wstring Filter;
 
     TraceProvider(
         _In_ GUID _ProviderGuid,
@@ -18,7 +18,7 @@ public:
         _In_ ULONGLONG _KeywordsAll,
         _In_ DWORD _Level,
         _In_ DWORD _Properties,
-        _In_ wstring _Filter) :
+        _In_ std::wstring _Filter) :
         ProviderGuid(_ProviderGuid),
         KeywordsAny(_KeywordsAny),
         KeywordsAll(_KeywordsAll),
@@ -95,7 +95,7 @@ CTraceManager::Create(_In_z_ LPWSTR TraceName,
                m_TraceName.c_str(),
                LoggerNameSize);
 
-    wstring LogFile = m_FileInformation.LogFileDirectory + L"\\" + m_FileInformation.LogFileame + L".etl";
+    std::wstring LogFile = m_FileInformation.LogFileDirectory + L"\\" + m_FileInformation.LogFileame + L".etl";
     CopyMemory((LPWSTR)((byte *)m_EventTraceProperties + m_EventTraceProperties->LogFileNameOffset),
                LogFile.c_str(),
                LogFile.size() * sizeof(wchar_t));

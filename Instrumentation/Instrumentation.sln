@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.30110.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TraceMonitor", "TraceMonitor\TraceMonitor.vcxproj", "{47B3358F-E7C3-4D02-9310-68813B9292E0}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "EtlParser", "EtlParser\EtlParser.vcxproj", "{14F0095F-034E-4178-AE72-3059B69A9D6D}"
@@ -12,8 +14,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Includes", "Includes", "{B2
 		Includes\sqlite3.h = Includes\sqlite3.h
 		Includes\TraceManagerLib.h = Includes\TraceManagerLib.h
 	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TraceManagerLib", "EventManager\EventManager.vcxproj", "{D9170D63-49F8-4850-8025-A4EF09AAF245}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TrcMonLib", "TrcMonLib\TrcMonLib.vcxproj", "{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}"
 EndProject
@@ -43,12 +43,6 @@ Global
 		{80A77431-2587-4ECD-8BF3-DAB5B2807E3F}.Release|Win32.ActiveCfg = Release|Win32
 		{80A77431-2587-4ECD-8BF3-DAB5B2807E3F}.Release|Win32.Build.0 = Release|Win32
 		{80A77431-2587-4ECD-8BF3-DAB5B2807E3F}.Release|Win32.Deploy.0 = Release|Win32
-		{D9170D63-49F8-4850-8025-A4EF09AAF245}.Debug|Win32.ActiveCfg = Debug|Win32
-		{D9170D63-49F8-4850-8025-A4EF09AAF245}.Debug|Win32.Build.0 = Debug|Win32
-		{D9170D63-49F8-4850-8025-A4EF09AAF245}.Debug|Win32.Deploy.0 = Debug|Win32
-		{D9170D63-49F8-4850-8025-A4EF09AAF245}.Release|Win32.ActiveCfg = Release|Win32
-		{D9170D63-49F8-4850-8025-A4EF09AAF245}.Release|Win32.Build.0 = Release|Win32
-		{D9170D63-49F8-4850-8025-A4EF09AAF245}.Release|Win32.Deploy.0 = Release|Win32
 		{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}.Debug|Win32.ActiveCfg = Debug|Win32
 		{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}.Debug|Win32.Build.0 = Debug|Win32
 		{18B379E0-C3C2-4940-9CE2-DCEECA5DA9B6}.Debug|Win32.Deploy.0 = Debug|Win32

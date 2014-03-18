@@ -4,6 +4,7 @@
 class CTraceSession
 {
 private:
+    std::vector<CTraceProvider *> m_TraceProviders;
     HANDLE m_TraceHandle;
 
 public:

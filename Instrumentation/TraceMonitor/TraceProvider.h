@@ -1,76 +1,67 @@
 #pragma once
+//#include <TraceManagerLib.h>
+
+struct FileInformation
+{
+    std::wstring LogFileame;
+    std::wstring LogFileDirectory;
+    bool Append;
+    bool Circular;
+};
+
+
 class CTraceProvider
 {
+private:
     std::wstring m_TraceName;
-    GUID m_TraceGuid;
-    ULONGLONG m_MatchAnyKeyword;
-    ULONGLONG m_MatchAllKeyword;
-    UCHAR m_Level;
-    DWORD m_Properties;
-    std::wstring m_Filter;
+    GUID m_TraceSessionGuid;
+    //std::vector<TraceProvider *> m_TraceProviders; //enabletrace
+    PEVENT_TRACE_PROPERTIES m_EventTraceProperties;
+    TRACEHANDLE m_TraceHandle;
+    DWORD m_LoggerThreadId;
+    FileInformation m_FileInformation;
 
 public:
-    CTraceProvider(void) :
-        m_MatchAnyKeyword(0),
-        m_MatchAllKeyword(0),
-        m_Level(0),
-        m_Properties(0)
-    {
-    }
-    CTraceProvider(_In_z_ std::wstring TraceName,
-                   _In_ GUID TraceGuid) :
-        m_TraceName(TraceName),
-        m_MatchAnyKeyword(0),
-        m_MatchAllKeyword(0),
-        m_Level(0),
-        m_Properties(0)
-    {
-        CopyMemory(&m_TraceGuid, &TraceGuid, sizeof(GUID));
-    }
+    CTraceProvider(void);
     ~CTraceProvider(void);
 
-    void SetTraceName(_In_z_ std::wstring TraceName)
-    {
-        m_TraceName = TraceName;
-    }
-    std::wstring GetTraceName()
-    {
-        return m_TraceName;
-    }
+    DWORD Create(
+        _In_z_ LPWSTR TraceName,
+        _In_z_ LPWSTR TraceDirectory
+        );
 
-    void SetTraceGuid(_In_ GUID &TraceGuid)
-    {
-        CopyMemory(&m_TraceGuid, &TraceGuid, sizeof(GUID));
-    }
-    LPCGUID GetTraceGuid()
-    {
-        return &m_TraceGuid;
-    }
+    DWORD AddTraceProvider(
+        _In_ GUID &ProviderGuid,
+        _In_ ULONGLONG KeywordsAny,
+        _In_ ULONGLONG KeywordsAll,
+        _In_ DWORD Level,
+        _In_ DWORD Properties,
+        _In_z_ LPWSTR Filter
+        );
 
-    void SetKeywordsAny(_In_ ULONGLONG MatchAllKeyword)
-    {
-        m_MatchAnyKeyword = MatchAllKeyword;
-    }
-    ULONGLONG GetKeywordsAny()
-    {
-        return m_MatchAnyKeyword;
-    }
+    DWORD DeleteTraceProvider(
+        _In_ GUID &ProviderGuid
+        );
 
-    void SetKeywordsAll(_In_ ULONGLONG MatchAllKeyword)
-    {
-        m_MatchAllKeyword = MatchAllKeyword;
-    }
-    ULONGLONG GetKeywordsAll()
-    {
-        return m_MatchAllKeyword;
-    }
+    DWORD SetTraceBuffers(
+        _In_ DWORD BufferSize,
+        _In_ DWORD MinimumBuffers,
+        _In_ DWORD MaximumBuffers
+        );
 
-    void SetLevel(_In_ UCHAR Level)
-    {
-        m_Level = Level;
-    }
-    UCHAR GetLevel()
-    {
-        return m_Level;
-    }
+    DWORD SetStreamMode(
+        _In_ StreamMode eStreamMode,
+        _In_ FileInformation *fileInformation
+        );
+
+    DWORD StartTraceSession();
+    DWORD StopTraceSession();
+
+private:
+    DWORD GetProvider(
+        _In_ GUID &ProviderGuid,
+        _In_ bool Remove,
+        _Out_ TraceProvider **Provider
+        );
 };
+
