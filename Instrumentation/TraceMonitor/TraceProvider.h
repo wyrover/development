@@ -1,15 +1,36 @@
 #pragma once
-//#include <TraceManagerLib.h>
 
-struct FileInformation
+class CTraceProvider
 {
-    std::wstring LogFileame;
-    std::wstring LogFileDirectory;
-    bool Append;
-    bool Circular;
+public:
+    std::wstring ProviderName;
+    GUID ProviderGuid;
+    ULONGLONG KeywordsAny;
+    ULONGLONG KeywordsAll;
+    DWORD Level;
+    DWORD Properties;
+    std::wstring Filter;
+
+    CTraceProvider(
+        _In_z_ std::wstring _ProviderName,
+        _In_ GUID _ProviderGuid,
+        _In_ ULONGLONG _KeywordsAny = 0,
+        _In_ ULONGLONG _KeywordsAll = 0,
+        _In_ DWORD _Level = 0,
+        _In_ DWORD _Properties = 0,
+        _In_ std::wstring _Filter = L"") :
+        ProviderName(_ProviderName),
+        ProviderGuid(_ProviderGuid),
+        KeywordsAny(_KeywordsAny),
+        KeywordsAll(_KeywordsAll),
+        Level(_Level),
+        Properties(_Properties),
+        Filter(_Filter)
+    {
+    }
 };
 
-
+#if 0
 class CTraceProvider
 {
 private:
@@ -64,4 +85,4 @@ private:
         _Out_ TraceProvider **Provider
         );
 };
-
+#endif

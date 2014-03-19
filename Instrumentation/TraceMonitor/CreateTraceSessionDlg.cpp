@@ -6,7 +6,7 @@
 
 
 CCreateTraceSessionDlg::CCreateTraceSessionDlg(void) :
-    m_NewTraceSession(NULL),
+    m_NewTraceSession(nullptr),
     m_hAddProvListView(NULL),
     m_hEditProvListView(NULL)
 {
@@ -24,6 +24,55 @@ CCreateTraceSessionDlg::ShowDialog(HWND hParent)
                             hParent,
                             WndProc,
                             (LPARAM)this) == IDOK);
+}
+
+BOOL CCreateTraceSessionDlg::SetTraceDirectory(_In_ HWND hParent)
+{
+    std::wstring dir;
+    if (GetDirFromBrowseDlg(hParent, dir))
+    {
+        HWND hTxt = GetDlgItem(hParent, IDC_TRACEBROWSE_EDIT);
+        SetWindowTextW(hTxt, dir.c_str());
+    }
+
+    return TRUE;
+}
+
+bool CCreateTraceSessionDlg::GetDirFromBrowseDlg(
+    HWND hParent,
+    std::wstring& Directory
+    )
+{
+    CComPtr<IFileOpenDialog> pDlg;
+    HRESULT hr;
+    bool Success = false;
+
+    hr = pDlg.CoCreateInstance(__uuidof(FileOpenDialog));
+    if (FAILED(hr)) return false;
+
+    pDlg->SetTitle(L"Select a folder");
+    pDlg->SetOptions(FOS_PICKFOLDERS);
+
+    // Show the dialog
+    hr = pDlg->Show(hParent);
+    if (SUCCEEDED(hr))
+    {
+        CComPtr<IShellItem> Item;
+        hr = pDlg->GetResult(&Item);
+        if (SUCCEEDED(hr))
+        {
+            LPOLESTR pwsz = NULL;
+            hr = Item->GetDisplayName(SIGDN_FILESYSPATH, &pwsz);
+            if (SUCCEEDED(hr))
+            {
+                Directory = pwsz;
+                CoTaskMemFree(pwsz);
+                Success = true;
+            }
+        }
+    }
+
+    return Success;
 }
 
 BOOL CCreateTraceSessionDlg::AddProvidersToList()
@@ -71,16 +120,26 @@ BOOL CCreateTraceSessionDlg::AddProvidersToTraceSession()
 
         if (ListView_GetItem(m_hAddProvListView, &lvi))
         {
-            m_NewTraceSession->AddProvider((CTraceProvider *)lvi.lParam);
+            m_NewTraceSession->AddTraceProvider((CTraceProvider *)lvi.lParam);
         }
     }
 
     return TRUE;
 }
 
-bool CCreateTraceSessionDlg::CreateTraceSession()
+bool CCreateTraceSessionDlg::CreateTraceSession(_In_ HWND hParent)
 {
-    return true;
+    WCHAR Name[MAX_PATH];
+    WCHAR Dir[MAX_PATH];
+
+    GetDlgItemTextW(hParent, IDC_TRACENAME_EDIT, Name, MAX_PATH);
+    GetDlgItemTextW(hParent, IDC_TRACEBROWSE_EDIT, Dir, MAX_PATH);
+
+    m_NewTraceSession = new CTraceSession();
+
+    HRESULT hr;
+    hr = m_NewTraceSession->Create(Name, Dir);
+    return SUCCEEDED(hr);
 }
 
 BOOL CCreateTraceSessionDlg::InitializeDialog(HWND hwnd)
@@ -143,6 +202,10 @@ CCreateTraceSessionDlg::WndProc(HWND hwnd,
         case WM_COMMAND: 
             switch (LOWORD(wParam)) 
             { 
+                case IDC_TRACE_BROWSE_BTN:
+                    This->SetTraceDirectory(hwnd);
+                    break;
+
                 case IDC_ADDPROV_BTN:
                     This->AddProvidersToList();
                     break;
@@ -150,7 +213,7 @@ CCreateTraceSessionDlg::WndProc(HWND hwnd,
                 case IDOK:
                 
                     // create session
-                    This->CreateTraceSession();
+                    This->CreateTraceSession(hwnd);
                 
                     // fall through
                 case IDCANCEL:

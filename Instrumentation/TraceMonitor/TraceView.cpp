@@ -20,8 +20,6 @@ CTraceView::~CTraceView(void)
 BOOL
 CTraceView::Initialize()
 {
-    BOOL bSuccess;
-
     /* Create the main treeview */
     m_hListView = CreateWindowExW(WS_EX_CLIENTEDGE,
                                   WC_LISTVIEW,

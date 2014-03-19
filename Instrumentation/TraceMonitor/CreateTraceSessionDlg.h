@@ -24,7 +24,12 @@ private:
     BOOL InitializeDialog(HWND hwnd);
     BOOL AddProvidersToTraceSession();
     BOOL AddProvidersToList();
-    bool CreateTraceSession();
+    BOOL SetTraceDirectory(_In_ HWND hParent);
+    bool CreateTraceSession(_In_ HWND hParent);
+    bool GetDirFromBrowseDlg(
+        HWND hParent,
+        std::wstring& Directory
+        );
 
     CTraceSession* GetTraceSession()
     {

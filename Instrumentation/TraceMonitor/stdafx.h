@@ -20,6 +20,7 @@
 #include <devguid.h>
 #include <tdh.h>
 #include <process.h>
+#include <ShObjIdl.h>
 
 #define _ATL_CSTRING_EXPLICIT_CONSTRUCTORS      // some CString constructors will be explicit
 
