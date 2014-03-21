@@ -292,7 +292,8 @@ bool
 CMainWindow::CreateMdiFrame()
 {
     CLIENTCREATESTRUCT MDIClientCreateStruct;
-    MDIClientCreateStruct.hWindowMenu = NULL;
+    MDIClientCreateStruct.hWindowMenu = GetSubMenu(GetMenu(Info->hSelf),
+        780	                                 ID_MDI_WINDOWMENU);
     MDIClientCreateStruct.idFirstChild = 50000;
 
     m_hMdiWnd = CreateWindowExW(0,
