@@ -5,8 +5,8 @@
 
 /* PUBLIC METHODS *************************************/
 
-CTraceView::CTraceView(HWND hMainWnd) :
-    m_hMainWnd(hMainWnd),
+CTraceView::CTraceView(void) :
+    m_hParent(NULL),
     m_hListView(NULL),
     m_hPropertyDialog(NULL),
     m_hShortcutMenu(NULL)
@@ -18,33 +18,38 @@ CTraceView::~CTraceView(void)
 }
 
 BOOL
-CTraceView::Initialize()
+CTraceView::Initialize(_In_ HWND hParent)
 {
-    /* Create the main treeview */
-    m_hListView = CreateWindowExW(WS_EX_CLIENTEDGE,
-                                  WC_LISTVIEW,
-                                  NULL,
-                                  WS_CHILD | LVS_REPORT | LVS_EDITLABELS,
-                                  0, 0, 0, 0,
-                                  m_hMainWnd,
-                                  (HMENU)IDC_TRACEVIEW,
-                                  g_hInstance,
-                                  NULL);
-    if (m_hListView)
-    {
-        /* Set the image list against the treeview */
-        (VOID)ListView_SetImageList(m_hListView,
-                                    m_ImageList,
-                                    TVSIL_NORMAL);
-    }
-
-    return !!(m_hListView);
+    m_hParent = hParent;
+    return true;
 }
 
 BOOL
 CTraceView::Uninitialize()
 {
     return TRUE;
+}
+
+bool CTraceView::CreateNew()
+{
+
+    MDICREATESTRUCTW MdiCreate;
+    MdiCreate.szClass = WC_LISTVIEW;
+    MdiCreate.szTitle = L"Test";
+    MdiCreate.hOwner = g_hInstance;
+    MdiCreate.x = CW_USEDEFAULT;
+    MdiCreate.y = CW_USEDEFAULT;
+    MdiCreate.cx = CW_USEDEFAULT;
+    MdiCreate.cy = CW_USEDEFAULT;
+    MdiCreate.style = WS_CHILD | LVS_REPORT | LVS_EDITLABELS;
+    MdiCreate.lParam = 0;
+
+    HWND hwndChild = (HWND)SendMessage(m_hParent,
+                                        WM_MDICREATE,
+                                        0,
+                                        (LPARAM)(LPMDICREATESTRUCT)&MdiCreate);
+
+    return !!(hwndChild);
 }
 
 VOID

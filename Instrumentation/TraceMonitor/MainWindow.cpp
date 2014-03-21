@@ -39,6 +39,7 @@ static const MENU_HINT SystemMenuHintTable[] =
 CMainWindow::CMainWindow(void) :
     m_ToolbarhImageList(NULL),
     m_hMainWnd(NULL),
+    m_hMdiWnd(NULL),
     m_hStatusBar(NULL),
     m_hToolBar(NULL),
     m_CmdShow(0)
@@ -287,6 +288,29 @@ CMainWindow::CreateStatusBar()
     return bRet;
 }
 
+bool
+CMainWindow::CreateMdiFrame()
+{
+    CLIENTCREATESTRUCT MDIClientCreateStruct;
+    MDIClientCreateStruct.hWindowMenu = NULL;
+    MDIClientCreateStruct.idFirstChild = 50000;
+
+    m_hMdiWnd = CreateWindowExW(0,
+                                L"MDICLIENT",
+                                NULL,
+                                WS_VISIBLE | WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VSCROLL | WS_HSCROLL,
+                                0,
+                                0,
+                                0,
+                                0,
+                                m_hMainWnd,
+                                (HMENU)1,
+                                g_hInstance,
+                                (void *)&MDIClientCreateStruct);
+
+    return (m_hMdiWnd != NULL);
+}
+
 BOOL
 CMainWindow::StatusBarLoadString(IN HWND hStatusBar,
                                  IN INT PartId,
@@ -323,11 +347,13 @@ CMainWindow::OnCreate(HWND hwnd)
     /* Create the toolbar */
     if (CreateToolBar() && CreateStatusBar())
     {
+        CreateMdiFrame();
+
         /* Create the device view object */
-        m_TraceView = new CTraceView(m_hMainWnd);
+        m_TraceView = new CTraceView();
 
         /* Initialize it */
-        if (m_TraceView->Initialize())
+        if (m_TraceView->Initialize(m_hMdiWnd))
         {
             /* Display the window according to the user request */
             ShowWindow(hwnd, m_CmdShow);
@@ -366,11 +392,15 @@ CMainWindow::OnSize()
     /* Calculate the remaining height for the treeview */
     lvHeight = rcClient.bottom - iToolHeight - iStatusHeight;
 
-    /* Resize the device view */
-    m_TraceView->Size(0,
-                       iToolHeight,
-                       rcClient.right,
-                       lvHeight);
+    SetWindowPos(m_hMdiWnd,
+        NULL,
+        0,
+        iToolHeight,
+        rcClient.right,
+        lvHeight,
+        0);
+
+
 
     return 0;
 }
@@ -413,28 +443,34 @@ CMainWindow::OnCommand(WPARAM wParam,
 
     switch (Msg)
     {
+        case IDC_NEW_TRACESESSION:
+        {
+            CCreateTraceSessionDlg TraceSessionDlg;
+            if (TraceSessionDlg.ShowDialog(m_hMainWnd))
+            {
+                m_TraceView->CreateNew();
+                m_TraceSessions.push_back(TraceSessionDlg.GetNewTraceSession());
+            }
+            break;
+        }
+
         case IDC_PROP:
         {
             /* Display the device property sheet */
-            m_TraceView->DisplayPropertySheet();
+           // m_TraceView->DisplayPropertySheet();
             break;
         }
 
         case IDC_REFRESH:
         {
             /* Refresh the device list */
-            m_TraceView->Refresh();
+            //m_TraceView->Refresh();
             break;
         }
 
         case IDC_DEVBYTYPE:
         {
-            CCreateTraceSessionDlg TraceSessionDlg;
-            if (TraceSessionDlg.ShowDialog(m_hMainWnd))
-            {
-                m_TraceSessions.push_back(TraceSessionDlg.GetNewTraceSession());
-            }
-            break;
+           
         }
 
         case IDC_ABOUT:
@@ -470,11 +506,11 @@ LRESULT
 CMainWindow::OnDestroy()
 {
     /* Uninitialize the device view */
-    m_TraceView->Uninitialize();
+    //m_TraceView->Uninitialize();
 
     /* Kill the object */
-    delete m_TraceView;
-    m_TraceView = NULL;
+    //delete m_TraceView;
+    //m_TraceView = NULL;
 
     /* Clear the user data pointer */
     SetWindowLongPtr(m_hMainWnd, GWLP_USERDATA, 0);

@@ -13,6 +13,7 @@ class CMainWindow
     CAtlString m_szMainWndClass;
     CTraceView *m_TraceView;
     HWND m_hMainWnd;
+    HWND m_hMdiWnd;
     HWND m_hStatusBar;
     HWND m_hToolBar;
     HIMAGELIST m_ToolbarhImageList;
@@ -33,6 +34,7 @@ private:
 
     BOOL CreateToolBar();
     BOOL CreateStatusBar();
+    bool CreateMdiFrame();
     BOOL StatusBarLoadString(HWND hStatusBar, INT PartId, HINSTANCE hInstance, UINT uID);
     BOOL MainWndMenuHint(WORD CmdId,
                          const MENU_HINT *HintArray,

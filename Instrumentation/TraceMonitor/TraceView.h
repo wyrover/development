@@ -2,7 +2,7 @@
 
 class CTraceView
 {
-    HWND m_hMainWnd;
+    HWND m_hParent;
     HWND m_hListView;
     HWND m_hPropertyDialog;
     HWND m_hShortcutMenu;
@@ -10,11 +10,13 @@ class CTraceView
     HIMAGELIST m_ImageList;
 
 public:
-    CTraceView(HWND hMainWnd);
+    CTraceView(void);
     ~CTraceView(void);
 
-    BOOL Initialize();
+    BOOL Initialize(_In_ HWND hParent);
     BOOL Uninitialize();
+
+    bool CreateNew();
 
     VOID Size(
         _In_ INT x,
