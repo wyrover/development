@@ -19,7 +19,7 @@ class CMainWindow
     HMENU m_hMenu;
     int m_CmdShow;
 
-    std::vector<CTraceSession *> m_TraceSessions; //fixme: this should be linked to tabs or something
+    CTraceSession *m_TraceSession;
 
 private:
     static LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);

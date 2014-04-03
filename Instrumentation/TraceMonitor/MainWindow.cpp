@@ -415,7 +415,7 @@ CMainWindow::OnCommand(WPARAM wParam,
             CCreateTraceSessionDlg TraceSessionDlg;
             if (TraceSessionDlg.ShowDialog(m_hMainWnd))
             {
-                m_TraceSessions.push_back(TraceSessionDlg.GetNewTraceSession());
+                m_TraceSession = TraceSessionDlg.GetNewTraceSession();
             }
             break;
         }
