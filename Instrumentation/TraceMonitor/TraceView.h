@@ -16,8 +16,6 @@ public:
     BOOL Initialize(_In_ HWND hParent);
     BOOL Uninitialize();
 
-    bool CreateNew();
-
     VOID Size(
         _In_ INT x,
         _In_ INT y,

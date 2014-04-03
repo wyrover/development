@@ -9,16 +9,12 @@
 /* menu hints */
 static const MENU_HINT MainMenuHintTable[] =
 {
-    /* File Menu */
-    {IDC_EXIT,     IDS_HINT_EXIT},
-
     /* Action Menu */
     {IDC_REFRESH,  IDS_HINT_REFRESH},
-    {IDC_PROP,     IDS_HINT_PROP},
 
     {IDC_ABOUT,    IDS_HINT_ABOUT},
 
-    {IDC_DEVBYTYPE, IDS_HINT_DEV_BY_TYPE}
+    //{IDC_DEVBYTYPE, IDS_HINT_DEV_BY_TYPE}
 
 };
 
@@ -39,7 +35,6 @@ static const MENU_HINT SystemMenuHintTable[] =
 CMainWindow::CMainWindow(void) :
     m_ToolbarhImageList(NULL),
     m_hMainWnd(NULL),
-    m_hMdiWnd(NULL),
     m_hStatusBar(NULL),
     m_hToolBar(NULL),
     m_CmdShow(0)
@@ -172,7 +167,6 @@ CMainWindow::CreateToolBar()
 
     static TBBUTTON ToolbarButtons [] =
     {
-        {TBICON_PROP,    IDC_PROP,    TBSTATE_INDETERMINATE, BTNS_BUTTON, {0}, 0, 0},
         {TBICON_REFRESH, IDC_REFRESH, TBSTATE_ENABLED,       BTNS_BUTTON, {0}, 0, 0},
 
         /* Add a seperator: First item for a seperator is its width in pixels */
@@ -217,7 +211,7 @@ CMainWindow::CreateToolBar()
         return FALSE;
 
     /* Set the index endpoints */
-    StartResource = IDB_PROP;
+    StartResource = IDB_REFRESH;
     EndResource = IDB_REFRESH;
 
     /* Add all icons to the image list */
@@ -288,30 +282,6 @@ CMainWindow::CreateStatusBar()
     return bRet;
 }
 
-bool
-CMainWindow::CreateMdiFrame()
-{
-    CLIENTCREATESTRUCT MDIClientCreateStruct;
-    MDIClientCreateStruct.hWindowMenu = GetSubMenu(GetMenu(Info->hSelf),
-        780	                                 ID_MDI_WINDOWMENU);
-    MDIClientCreateStruct.idFirstChild = 50000;
-
-    m_hMdiWnd = CreateWindowExW(0,
-                                L"MDICLIENT",
-                                NULL,
-                                WS_VISIBLE | WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_VSCROLL | WS_HSCROLL,
-                                0,
-                                0,
-                                0,
-                                0,
-                                m_hMainWnd,
-                                (HMENU)1,
-                                g_hInstance,
-                                (void *)&MDIClientCreateStruct);
-
-    return (m_hMdiWnd != NULL);
-}
-
 BOOL
 CMainWindow::StatusBarLoadString(IN HWND hStatusBar,
                                  IN INT PartId,
@@ -348,13 +318,11 @@ CMainWindow::OnCreate(HWND hwnd)
     /* Create the toolbar */
     if (CreateToolBar() && CreateStatusBar())
     {
-        CreateMdiFrame();
-
         /* Create the device view object */
         m_TraceView = new CTraceView();
 
         /* Initialize it */
-        if (m_TraceView->Initialize(m_hMdiWnd))
+        if (m_TraceView->Initialize(hwnd))
         {
             /* Display the window according to the user request */
             ShowWindow(hwnd, m_CmdShow);
@@ -393,13 +361,11 @@ CMainWindow::OnSize()
     /* Calculate the remaining height for the treeview */
     lvHeight = rcClient.bottom - iToolHeight - iStatusHeight;
 
-    SetWindowPos(m_hMdiWnd,
-        NULL,
-        0,
+    /* Resize the device view */
+    m_TraceView->Size(0,
         iToolHeight,
         rcClient.right,
-        lvHeight,
-        0);
+        lvHeight);
 
 
 
@@ -449,7 +415,6 @@ CMainWindow::OnCommand(WPARAM wParam,
             CCreateTraceSessionDlg TraceSessionDlg;
             if (TraceSessionDlg.ShowDialog(m_hMainWnd))
             {
-                m_TraceView->CreateNew();
                 m_TraceSessions.push_back(TraceSessionDlg.GetNewTraceSession());
             }
             break;
@@ -469,11 +434,6 @@ CMainWindow::OnCommand(WPARAM wParam,
             break;
         }
 
-        case IDC_DEVBYTYPE:
-        {
-           
-        }
-
         case IDC_ABOUT:
         {
             /* Blow my own trumpet */
@@ -483,16 +443,6 @@ CMainWindow::OnCommand(WPARAM wParam,
 
             /* Set focus back to the treeview */
             //m_DeviceView->SetFocus();
-            break;
-        }
-
-        case IDC_EXIT:
-        {
-            /* Post a close message to the window */
-            PostMessageW(m_hMainWnd,
-                         WM_CLOSE,
-                         0,
-                         0);
             break;
         }
 
@@ -625,7 +575,7 @@ CMainWindow::MainWndProc(HWND hwnd,
         default:
         {
 HandleDefaultMessage:
-            RetCode = DefWindowProc(hwnd, msg, wParam, lParam);
+            RetCode = DefWindowProcW(hwnd, msg, wParam, lParam);
             break;
         }
     }
