@@ -19,9 +19,17 @@ public:
     }
 
 private:
-    static BOOL CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    static BOOL CALLBACK TraceNameWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    static BOOL CALLBACK TraceSessionWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-    BOOL InitializeDialog(HWND hwnd);
+    
+    HPROPSHEETPAGE InitPropSheetPage(
+        PROPSHEETPAGEW *psp,
+        WORD idDlg,
+        DLGPROC DlgProc
+        );
+
+    BOOL InitTraceSessionPage(HWND hwnd);
     BOOL AddProvidersToTraceSession();
     BOOL AddProvidersToList();
     BOOL SetTraceDirectory(_In_ HWND hParent);
