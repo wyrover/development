@@ -1,3 +1,12 @@
+/*
+* PROJECT:     ReactOS Device Manager
+* LICENSE:     GPL - See COPYING in the top level directory
+* FILE:        base/applications/mscutils/devmgmt/devices.cpp
+* PURPOSE:     Wrapper around setupapi functions
+* COPYRIGHT:   Copyright 2006 Ged Murphy <gedmurphy@gmail.com>
+*
+*/
+
 #include "StdAfx.h"
 #include "devmgmt.h"
 #include "Devices.h"
@@ -49,9 +58,11 @@ CDevices::Uninitialize()
 }
 
 BOOL
-CDevices::GetDeviceTreeRoot(_Out_ LPWSTR RootName,
-                            _In_ DWORD RootNameSize,
-                            _Out_ PINT RootImageIndex)
+CDevices::GetDeviceTreeRoot(
+    _Out_ LPWSTR RootName,
+    _In_ DWORD RootNameSize,
+    _Out_ PINT RootImageIndex
+    )
 {
     wcscpy_s(RootName, RootNameSize, m_RootName);
     *RootImageIndex = m_RootImageIndex;
@@ -60,8 +71,10 @@ CDevices::GetDeviceTreeRoot(_Out_ LPWSTR RootName,
 }
 
 BOOL
-CDevices::GetChildDevice(_In_ DEVINST ParentDevInst,
-                         _Out_ PDEVINST DevInst)
+CDevices::GetChildDevice(
+    _In_ DEVINST ParentDevInst,
+    _Out_ PDEVINST DevInst
+    )
 {
     CONFIGRET cr;
 
@@ -72,8 +85,10 @@ CDevices::GetChildDevice(_In_ DEVINST ParentDevInst,
 }
 
 BOOL
-CDevices::GetSiblingDevice(_In_ DEVINST PrevDevice,
-                           _Out_ PDEVINST DevInst)
+CDevices::GetSiblingDevice(
+    _In_ DEVINST PrevDevice,
+    _Out_ PDEVINST DevInst
+    )
 {
     CONFIGRET cr;
 
@@ -84,9 +99,11 @@ CDevices::GetSiblingDevice(_In_ DEVINST PrevDevice,
 }
 
 BOOL
-CDevices::GetDeviceStatus(_In_ LPWSTR DeviceId,
-                          _Out_ PULONG Status,
-                          _Out_ PULONG ProblemNumber)
+CDevices::GetDeviceStatus(
+    _In_ LPWSTR DeviceId,
+    _Out_ PULONG Status,
+    _Out_ PULONG ProblemNumber
+    )
 {
     DEVINST DeviceInstance;
     CONFIGRET cr;
@@ -94,35 +111,35 @@ CDevices::GetDeviceStatus(_In_ LPWSTR DeviceId,
     *Status = 0;
     *ProblemNumber = 0;
 
+    /* Use the device id string to lookup the instance */
     cr = CM_Locate_DevNodeW(&DeviceInstance,
                             DeviceId,
                             CM_LOCATE_DEVNODE_NORMAL);
     if (cr == CR_SUCCESS)
     {
+        /* Get the status of this device */
         cr = CM_Get_DevNode_Status_Ex(Status,
                                       ProblemNumber,
                                       DeviceInstance,
                                       0,
                                       NULL);
-        if (cr == CR_SUCCESS)
-        {
-            return TRUE;;
-        }
     }
 
-    return FALSE;
+    return (cr == CR_SUCCESS) ? TRUE : FALSE;
 }
 
 BOOL
-CDevices::EnumClasses(_In_ ULONG ClassIndex,
-                      _Out_writes_bytes_(sizeof(GUID)) LPGUID ClassGuid,
-                      _Out_writes_(ClassNameSize) LPWSTR ClassName,
-                      _In_ DWORD ClassNameSize,
-                      _Out_writes_(ClassDescSize) LPWSTR ClassDesc,
-                      _In_ DWORD ClassDescSize,
-                      _Out_ PINT ClassImage,
-                      _Out_ LPBOOL IsUnknown,
-                      _Out_ LPBOOL IsHidden)
+CDevices::EnumClasses(
+    _In_ ULONG ClassIndex,
+    _Out_writes_bytes_(sizeof(GUID)) LPGUID ClassGuid,
+    _Out_writes_(ClassNameSize) LPWSTR ClassName,
+    _In_ DWORD ClassNameSize,
+    _Out_writes_(ClassDescSize) LPWSTR ClassDesc,
+    _In_ DWORD ClassDescSize,
+    _Out_ PINT ClassImage,
+    _Out_ LPBOOL IsUnknown,
+    _Out_ LPBOOL IsHidden
+    )
 {
     DWORD RequiredSize, Type, Size;
     CONFIGRET cr;
@@ -338,8 +355,10 @@ CDevices::EnumDevicesForClass(
                                                      NULL);
     }
 
+    /* If we didn't find a name, check if this is an unknown device */
     if (bSuccess == FALSE && bUnknown == TRUE)
     {
+        /* We add in our own text */
         wcscpy_s(DeviceName, 256, L"Unknown device");
         bSuccess = TRUE;
     }
@@ -362,7 +381,6 @@ Quit:
 
 
 /* PRIVATE METHODS ******************************************/
-
 
 BOOL
 CDevices::CreateRootDevice()
@@ -408,8 +426,10 @@ Cleanup:
 
 
 DWORD
-CDevices::ConvertResourceDescriptorToString(_Inout_z_ LPWSTR ResourceDescriptor,
-                                            _In_ DWORD ResourceDescriptorSize)
+CDevices::ConvertResourceDescriptorToString(
+    _Inout_z_ LPWSTR ResourceDescriptor,
+    _In_ DWORD ResourceDescriptorSize
+    )
 {
     WCHAR ModulePath[MAX_PATH];
     WCHAR ResString[256];

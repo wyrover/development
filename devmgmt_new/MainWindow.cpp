@@ -390,9 +390,15 @@ CMainWindow::OnNotify(LPARAM lParam)
             break;
         }
 
+        case NM_DBLCLK:
+        {
+            m_DeviceView->DisplayPropertySheet();
+            break;
+        }
+
         case NM_RETURN:
         {
-            // open prop sheet of selected item
+            m_DeviceView->DisplayPropertySheet();
             break;
         }
     }

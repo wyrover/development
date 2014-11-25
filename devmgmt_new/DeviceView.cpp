@@ -3,6 +3,19 @@
 #include "DeviceView.h"
 
 
+INT_PTR
+WINAPI
+DevicePropertiesExW(
+    IN HWND hWndParent OPTIONAL,
+    IN LPCWSTR lpMachineName OPTIONAL,
+    IN LPCWSTR lpDeviceID OPTIONAL,
+    IN DWORD dwFlags OPTIONAL,
+    IN BOOL bShowDevMgr
+);
+
+typedef INT_PTR(WINAPI *pDevicePropertiesExW)(HWND,LPCWSTR,LPCWSTR,DWORD,BOOL);
+
+
 /* PUBLIC METHODS *************************************/
 
 CDeviceView::CDeviceView(
@@ -104,6 +117,39 @@ CDeviceView::Refresh()
 VOID
 CDeviceView::DisplayPropertySheet()
 {
+#ifndef __REACTOS__
+    pDevicePropertiesExW DevicePropertiesExW;
+    HMODULE hModule = LoadLibraryW(L"devmgr.dll");
+
+    if (hModule == NULL) return;
+
+    DevicePropertiesExW = (pDevicePropertiesExW)GetProcAddress(hModule,
+                                                               "DevicePropertiesExW");
+    if (DevicePropertiesExW == NULL)
+    {
+        FreeLibrary(hModule);
+        return;
+    }
+#endif
+
+    TV_ITEM tvItem;
+
+    tvItem.hItem = TreeView_GetSelection(m_hTreeView);
+    tvItem.mask = TVIF_PARAM;
+
+    if (TreeView_GetItem(m_hTreeView, &tvItem) &&
+        (LPTSTR)tvItem.lParam != NULL)
+    {
+        DevicePropertiesExW(m_hTreeView,
+                            NULL,
+                            (LPTSTR)tvItem.lParam,
+                            1,//DPF_EXTENDED,
+                            FALSE);
+    }
+
+#ifndef __REACTOS__
+    FreeLibrary(hModule);
+#endif
 }
 
 VOID
@@ -257,8 +303,6 @@ CDeviceView::ListDevicesByType()
                                               hDevItem,
                                               TVE_EXPAND);
                     }
-
-                    HeapFree(GetProcessHeap(), 0, DeviceId);
                 }
 
                 DeviceIndex++;
