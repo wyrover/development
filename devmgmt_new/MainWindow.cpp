@@ -192,8 +192,7 @@ CMainWindow::CreateToolBar()
                                  (HMENU)IDC_TOOLBAR,
                                  g_hInstance,
                                  NULL);
-    if (m_hToolBar == NULL)
-        return FALSE;
+    if (m_hToolBar == NULL) return FALSE;
 
     /* Don't show clipped buttons */
     SendMessageW(m_hToolBar,
@@ -213,8 +212,7 @@ CMainWindow::CreateToolBar()
                                            ILC_MASK | ILC_COLOR24,
                                            NumButtons,
                                            0);
-    if (m_ToolbarhImageList == NULL)
-        return FALSE;
+    if (m_ToolbarhImageList == NULL) return FALSE;
 
     /* Set the index endpoints */
     StartResource = IDB_PROP;
@@ -389,6 +387,12 @@ CMainWindow::OnNotify(LPARAM lParam)
 
             NmTreeView->action = NmTreeView->action;
 
+            break;
+        }
+
+        case NM_RETURN:
+        {
+            // open prop sheet of selected item
             break;
         }
     }

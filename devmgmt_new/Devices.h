@@ -40,19 +40,30 @@ public:
 
     BOOL EnumClasses(
         _In_ ULONG ClassIndex,
-        _Out_ LPWSTR ClassName,
+        _Out_writes_bytes_(sizeof(GUID)) LPGUID ClassGuid,
+        _Out_writes_(ClassNameSize) LPWSTR ClassName,
         _In_ DWORD ClassNameSize,
-        _Out_ LPWSTR ClassDesc,
+        _Out_writes_(ClassDescSize) LPWSTR ClassDesc,
         _In_ DWORD ClassDescSize,
         _Out_ PINT ClassImage,
         _Out_ LPBOOL IsUnknown,
         _Out_ LPBOOL IsHidden
         );
 
-    BOOL EnumClassDevices(
-        _In_ ULONG ClassIndex,
-        _In_ DWORD MemberIndex,
-        _Out_ LPBOOL HasChild,
+    BOOL EnumDevicesForClass(
+        _Inout_opt_ LPHANDLE DeviceHandle,
+        _In_ LPCGUID ClassGuid,
+        _In_ DWORD Index,
+        _Out_ LPBOOL MoreItems,
+        _Out_ LPTSTR DeviceName,
+        _In_ DWORD DeviceNameSize,
+        _Out_ LPTSTR *DeviceId
+        );
+
+    BOOL EnumUnknownDevices(
+        _Out_ LPHANDLE UnknownHandle,
+        _In_ DWORD Index,
+        _Out_ LPBOOL MoreItems,
         _Out_ LPTSTR DeviceName,
         _In_ DWORD DeviceNameSize,
         _Out_ LPTSTR *DeviceID

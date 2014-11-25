@@ -115,16 +115,16 @@ CDevices::GetDeviceStatus(_In_ LPWSTR DeviceId,
 
 BOOL
 CDevices::EnumClasses(_In_ ULONG ClassIndex,
-                      _Out_ LPWSTR ClassName,
+                      _Out_writes_bytes_(sizeof(GUID)) LPGUID ClassGuid,
+                      _Out_writes_(ClassNameSize) LPWSTR ClassName,
                       _In_ DWORD ClassNameSize,
-                      _Out_ LPWSTR ClassDesc,
+                      _Out_writes_(ClassDescSize) LPWSTR ClassDesc,
                       _In_ DWORD ClassDescSize,
                       _Out_ PINT ClassImage,
                       _Out_ LPBOOL IsUnknown,
                       _Out_ LPBOOL IsHidden)
 {
     DWORD RequiredSize, Type, Size;
-    GUID ClassGuid;
     CONFIGRET cr;
     DWORD Success;
     HKEY hKey;
@@ -137,19 +137,19 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
 
     /* Get the next class in the list */
     cr = CM_Enumerate_Classes(ClassIndex,
-                              &ClassGuid,
+                              ClassGuid,
                               0);
     if (cr != CR_SUCCESS) return FALSE;
 
     /* Get the name of the device class */
     RequiredSize = MAX_CLASS_NAME_LEN;
-    (VOID)SetupDiClassNameFromGuidW(&ClassGuid,
+    (VOID)SetupDiClassNameFromGuidW(ClassGuid,
                                     ClassName,
                                     RequiredSize,
                                     &RequiredSize);
 
     /* Open the registry key for this class */
-    hKey = SetupDiOpenClassRegKeyExW(&ClassGuid,
+    hKey = SetupDiOpenClassRegKeyExW(ClassGuid,
                                      MAXIMUM_ALLOWED,
                                      DIOCR_INSTALLER,
                                      NULL,
@@ -193,15 +193,15 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
 
     /* Get the image index for this class */
     (VOID)SetupDiGetClassImageIndex(&m_ImageListData,
-                                    &ClassGuid,
+                                    ClassGuid,
                                     ClassImage);
 
     /* Check if this is an unknown device */
-    *IsUnknown = IsEqualGUID(ClassGuid, GUID_DEVCLASS_UNKNOWN);
+    *IsUnknown = IsEqualGUID(*ClassGuid, GUID_DEVCLASS_UNKNOWN);
 
     /* Check if this is one of the classes we hide by default */
-    if (IsEqualGUID(ClassGuid, GUID_DEVCLASS_LEGACYDRIVER) ||
-        IsEqualGUID(ClassGuid, GUID_DEVCLASS_VOLUME))
+    if (IsEqualGUID(*ClassGuid, GUID_DEVCLASS_LEGACYDRIVER) ||
+        IsEqualGUID(*ClassGuid, GUID_DEVCLASS_VOLUME))
     {
         *IsHidden = TRUE;
     }
@@ -210,50 +210,217 @@ CDevices::EnumClasses(_In_ ULONG ClassIndex,
 }
 
 BOOL
-CDevices::EnumClassDevices(_In_ ULONG ClassIndex,
-                           _In_ DWORD MemberIndex,
-                           _Out_ LPBOOL HasChild,
-                           _Out_ LPTSTR DeviceName,
-                           _In_ DWORD DeviceNameSize,
-                           _Out_ LPTSTR *DeviceId)
+CDevices::EnumDevicesForClass(
+    _Inout_opt_ LPHANDLE DeviceHandle,
+    _In_ LPCGUID ClassGuid,
+    _In_ DWORD Index,
+    _Out_ LPBOOL MoreItems,
+    _Out_ LPTSTR DeviceName,
+    _In_ DWORD DeviceNameSize,
+    _Out_ LPTSTR *DeviceId
+    )
 {
     SP_DEVINFO_DATA DeviceInfoData;
-    CONFIGRET cr;
     DWORD DevIdSize;
-    GUID ClassGuid;
+    HDEVINFO hDevInfo;
+    BOOL bUnknown, bStatus, bSuccess;
+
+    *MoreItems = FALSE;
+    *DeviceName = NULL;
+    *DeviceId = NULL;
+    bUnknown = FALSE;
+
+    /* The unknown class is a special case */
+    if (IsEqualGUID(*ClassGuid, GUID_DEVCLASS_UNKNOWN))
+        bUnknown = TRUE;
+
+
+    /* Check if this is the first call for this class */
+    if (*DeviceHandle == NULL)
+    {
+        ATLASSERT(Index == 0);
+
+        /* Check for the special case */
+        if (bUnknown == TRUE)
+        {
+            /* Get device info for all devices for all classes */
+            hDevInfo = SetupDiGetClassDevsW(NULL,
+                                            NULL,
+                                            NULL,
+                                            DIGCF_ALLCLASSES);
+            if (hDevInfo == INVALID_HANDLE_VALUE)
+                return FALSE;
+        }
+        else
+        {
+            /* We only want the devices for this class */
+            hDevInfo = SetupDiGetClassDevsW(ClassGuid,
+                                            NULL,
+                                            NULL,
+                                            DIGCF_PRESENT);
+            if (hDevInfo == INVALID_HANDLE_VALUE)
+                return FALSE;
+        }
+
+        /* Store the handle for the next call */
+        *DeviceHandle = (HANDLE)hDevInfo;
+    }
+    else
+    {
+        hDevInfo = (HDEVINFO)*DeviceHandle;
+    }
+
+
+    /* Get the device info for this device in the class */
+    ZeroMemory(&DeviceInfoData, sizeof(SP_DEVINFO_DATA));
+    DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+    bSuccess = SetupDiEnumDeviceInfo(hDevInfo,
+                                     Index,
+                                     &DeviceInfoData);
+    if (bSuccess == FALSE) goto Quit;
+
+
+
+    /* We found a device, let the caller know they might be more */
+    *MoreItems = TRUE;
+
+    /* Check if this is the unknown class */
+    if (bUnknown)
+    {
+        /* We're looking for devices without guids */
+        if (IsEqualGUID(DeviceInfoData.ClassGuid, GUID_NULL) == FALSE)
+        {
+            /* This is a known device, we aren't interested in it */
+            return FALSE;
+        }
+    }
+
+    /* Get the size required to hold the device id */
+    bSuccess = SetupDiGetDeviceInstanceIdW(hDevInfo,
+                                           &DeviceInfoData,
+                                           NULL,
+                                           0,
+                                           &DevIdSize);
+    if (bSuccess == FALSE && (GetLastError() != ERROR_INSUFFICIENT_BUFFER))
+        goto Quit;
+
+    /* Allocate some heap to hold the device string */
+    *DeviceId = (LPTSTR)HeapAlloc(GetProcessHeap(),
+                                  0,
+                                  DevIdSize * sizeof(WCHAR));
+    if (*DeviceId == NULL) goto Quit;
+
+    /* Now get the device id string */
+    bSuccess = SetupDiGetDeviceInstanceIdW(hDevInfo,
+                                           &DeviceInfoData,
+                                           *DeviceId,
+                                           DevIdSize,
+                                           NULL);
+    if (bSuccess == FALSE) goto Quit;
+
+    /* Get the device's friendly name */
+    bSuccess = SetupDiGetDeviceRegistryPropertyW(hDevInfo,
+                                                 &DeviceInfoData,
+                                                 SPDRP_FRIENDLYNAME,
+                                                 0,
+                                                 (BYTE*)DeviceName,
+                                                 256,
+                                                 NULL);
+    if (bSuccess == FALSE)
+    {
+        /* if the friendly name fails, try the description instead */
+        bSuccess = SetupDiGetDeviceRegistryPropertyW(hDevInfo,
+                                                     &DeviceInfoData,
+                                                     SPDRP_DEVICEDESC,
+                                                     0,
+                                                     (BYTE*)DeviceName,
+                                                     256,
+                                                     NULL);
+    }
+
+    if (bSuccess == FALSE && bUnknown == TRUE)
+    {
+        wcscpy_s(DeviceName, 256, L"Unknown device");
+        bSuccess = TRUE;
+    }
+
+Quit:
+    if (MoreItems == FALSE)
+        SetupDiDestroyDeviceInfoList(hDevInfo);
+
+    if (bSuccess == FALSE)
+    {
+        if (*DeviceId)
+        {
+            HeapFree(GetProcessHeap(), 0, *DeviceId);
+            *DeviceId = NULL;
+        }
+    }
+
+    return bSuccess;
+}
+
+BOOL
+CDevices::EnumUnknownDevices(
+    _Inout_opt_ LPHANDLE UnknownHandle,
+    _In_ DWORD Index,
+    _Out_ LPBOOL MoreItems,
+    _Out_ LPTSTR DeviceName,
+    _In_ DWORD DeviceNameSize,
+    _Out_ LPTSTR *DeviceId
+)
+{
+    SP_DEVINFO_DATA DeviceInfoData;
+    DWORD DevIdSize;
     HDEVINFO hDevInfo;
     BOOL bSuccess;
 
-    *HasChild = FALSE;
+    *MoreItems = FALSE;
     *DeviceName = _T('\0');
     *DeviceId = NULL;
 
-    /* Get the class guid for the devices we're enumerating */
-    cr = CM_Enumerate_Classes(ClassIndex,
-                              &ClassGuid,
-                              0);
-    if (cr != CR_SUCCESS) return FALSE;
 
-    /* Get device info for all devices of a particular class */
-    hDevInfo = SetupDiGetClassDevsW(&ClassGuid,
-                                    NULL,
-                                    NULL,
-                                    DIGCF_PRESENT);
-    if (hDevInfo == INVALID_HANDLE_VALUE)
-        return FALSE;
+
+
+    if (*UnknownHandle == NULL)
+    {
+        /* Get device info for all devices of a particular class */
+        hDevInfo = SetupDiGetClassDevsW(NULL,
+                                        NULL,
+                                        NULL,
+                                        DIGCF_ALLCLASSES);
+        if (hDevInfo == INVALID_HANDLE_VALUE)
+            return FALSE;
+
+        *UnknownHandle = (HANDLE)hDevInfo;
+    }
+    else
+    {
+        hDevInfo = (HDEVINFO)*UnknownHandle;
+    }
+
+
 
     /* Setup a device into struct */
     ZeroMemory(&DeviceInfoData, sizeof(SP_DEVINFO_DATA));
     DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
 
+
     /* Get the device info for this device in the class */
     bSuccess = SetupDiEnumDeviceInfo(hDevInfo,
-                                     MemberIndex,
+                                     Index,
                                      &DeviceInfoData);
     if (bSuccess == FALSE) goto Quit;
 
-    /* We found a device, let the caller know */
-    *HasChild = TRUE;
+
+    /* We found a device, let the caller know there may be more */
+    *MoreItems = TRUE;
+
+    /* Check if this is a device without a guid */
+    if (IsEqualGUID(DeviceInfoData.ClassGuid, GUID_NULL) == FALSE)
+    {
+        return FALSE;
+    }
 
     /* Get the size required to hold the device id */
     bSuccess = SetupDiGetDeviceInstanceIdW(hDevInfo,

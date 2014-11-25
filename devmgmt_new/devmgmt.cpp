@@ -19,7 +19,7 @@ wWinMain(HINSTANCE hThisInstance,
     int Ret = 1;
 
     /* Check if the app is already running */
-    hMutex = CreateMutexW(NULL, TRUE, L"devmgmt_mutex");
+    hMutex = CreateMutexW(NULL, TRUE, L"devmgmt_mutex2");
     if (hMutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS)
     {
         /* Cleanup and exit */

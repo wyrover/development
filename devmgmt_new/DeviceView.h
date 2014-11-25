@@ -78,10 +78,10 @@ private:
 
     HTREEITEM InsertIntoTreeView(
         _In_ HTREEITEM hParent,
-        _In_ LPTSTR lpLabel,
+        _In_z_ LPWSTR lpLabel,
         _In_ LPARAM lParam,
         _In_ INT DevImage,
-        _In_ LONG DevProb
+        _In_ UINT OverlayImage
         );
 };
 

@@ -27,7 +27,6 @@
 #define IDS_TOOLTIP_PROP    6000
 #define IDS_TOOLTIP_REFRESH 6001
 #define IDS_TOOLTIP_HELP    6002
-#define IDS_TOOLTIP_EXIT    6003
 
 /* button bitmaps */
 #define IDB_PROP            10000
@@ -37,7 +36,6 @@
 #define TBICON_PROP         0
 #define TBICON_REFRESH      1
 #define TBICON_HELP         2
-#define TBICON_EXIT         3
 
 /* about box info */
 #define IDD_ABOUTBOX        200

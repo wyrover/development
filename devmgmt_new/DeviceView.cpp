@@ -5,7 +5,9 @@
 
 /* PUBLIC METHODS *************************************/
 
-CDeviceView::CDeviceView(HWND hMainWnd) :
+CDeviceView::CDeviceView(
+    HWND hMainWnd
+    ) :
     m_Devices(NULL),
     m_hMainWnd(hMainWnd),
     m_hTreeView(NULL),
@@ -88,6 +90,7 @@ CDeviceView::Refresh()
 {
     HANDLE hThread;
 
+    /* Run on a new thread to keep the gui responsive */
     hThread = (HANDLE)_beginthreadex(NULL,
                                      0,
                                      &ListDevicesThread,
@@ -149,6 +152,7 @@ BOOL
 CDeviceView::ListDevicesByType()
 {
     HTREEITEM hDevItem = NULL;
+    GUID ClassGuid;
     WCHAR ClassName[256];
     WCHAR ClassDescription[256];
     INT ClassIndex;
@@ -158,6 +162,7 @@ CDeviceView::ListDevicesByType()
     BOOL IsUnknown = FALSE;
     BOOL IsHidden = FALSE;
     BOOL bSuccess;
+
 
     /* Get the details of the root of the device tree */
     bSuccess = m_Devices->GetDeviceTreeRoot(ClassName, 256, &ClassImage);
@@ -179,6 +184,7 @@ CDeviceView::ListDevicesByType()
     {
         /* Get the next device class */
         bSuccess = m_Devices->EnumClasses(ClassIndex,
+                                          &ClassGuid,
                                           ClassName,
                                           256,
                                           ClassDescription,
@@ -190,11 +196,14 @@ CDeviceView::ListDevicesByType()
           //  (IsUnknown == FALSE || (IsUnknown && m_ShowUnknown)) &&
             //(IsHidden == FALSE || (IsHidden && m_ShowHidden)))
         {
+            BOOL bDevSuccess;
+            HANDLE Handle = NULL;
             WCHAR DeviceName[256];
             INT DeviceIndex = 0;
-            BOOL HasChild = FALSE;
+            BOOL MoreItems = FALSE;
             BOOL DeviceHasProblem = FALSE;
-            ULONG DeviceStatus, ProblemNumber;
+            ULONG DeviceStatus, ProblemNumber, OverlayImage;
+
 
             /* Insert the new class under the root item */
             hDevItem = InsertIntoTreeView(m_hTreeRoot,
@@ -205,20 +214,14 @@ CDeviceView::ListDevicesByType()
 
             do
             {
-                /* Get the next device in this class */
-                //HasChild = m_Devices->EnumClassDevices(ClassIndex,
-                //                                DeviceIndex,
-                //                                &HasChild,
-                //                                DeviceName,
-                //                                256,
-                //                                &DeviceId);
-                //if (HasChild)
-                if (m_Devices->EnumClassDevices(ClassIndex,
-                                                DeviceIndex,
-                                                &HasChild,
-                                                DeviceName,
-                                                256,
-                                                &DeviceId))
+                bDevSuccess = m_Devices->EnumDevicesForClass(&Handle,
+                                                             &ClassGuid,
+                                                             DeviceIndex,
+                                                             &MoreItems,
+                                                             DeviceName,
+                                                             256,
+                                                             &DeviceId);
+                if (bDevSuccess)
                 {
                     /* Get the status of the device */
                     if (m_Devices->GetDeviceStatus(DeviceId,
@@ -226,7 +229,17 @@ CDeviceView::ListDevicesByType()
                                                    &ProblemNumber))
                     {
                         /* Check if the device has a problem */
-                       DeviceHasProblem = (DeviceStatus & DN_HAS_PROBLEM);
+                        if (DeviceStatus & DN_HAS_PROBLEM)
+                        {
+                            DeviceHasProblem = TRUE;
+                            OverlayImage = 1;
+                        }
+
+                        if (ProblemNumber == CM_PROB_DISABLED ||
+                            ProblemNumber == CM_PROB_HARDWARE_DISABLED)
+                        {
+                            OverlayImage = 2;
+                        }
                     }
 
                     /* Add the device under the class item */
@@ -234,7 +247,7 @@ CDeviceView::ListDevicesByType()
                                              DeviceName,
                                              (LPARAM)DeviceId,
                                              ClassImage,
-                                             ProblemNumber);
+                                             OverlayImage);
 
                     /* Check if there's a problem with the device */
                     if (DeviceHasProblem)
@@ -248,7 +261,7 @@ CDeviceView::ListDevicesByType()
 
                 DeviceIndex++;
 
-            } while (HasChild);
+            } while (MoreItems);
 
             /* Check if this class has any devices */
             if (TreeView_GetChild(m_hTreeView, hDevItem))
@@ -322,13 +335,13 @@ CDeviceView::ListDevicesByConnection()
 }
 
  HTREEITEM
-CDeviceView::InsertIntoTreeView(HTREEITEM hParent,
-                                LPTSTR lpLabel,
-                                LPARAM lParam,
-                                INT DevImage,
-                                LONG DevProb)
+CDeviceView::InsertIntoTreeView(_In_ HTREEITEM hParent,
+                                _In_z_ LPWSTR lpLabel,
+                                _In_ LPARAM lParam,
+                                _In_ INT DevImage,
+                                _In_ UINT OverlayImage)
 {
-    TV_ITEM tvi;
+    TV_ITEMW tvi;
     TV_INSERTSTRUCT tvins;
 
     ZeroMemory(&tvi, sizeof(tvi));
@@ -341,16 +354,11 @@ CDeviceView::InsertIntoTreeView(HTREEITEM hParent,
     tvi.iImage = DevImage;
     tvi.iSelectedImage = DevImage;
 
-    if (DevProb != 0)
+    if (OverlayImage != 0)
     {
+        tvi.mask |= TVIF_STATE;
         tvi.stateMask = TVIS_OVERLAYMASK;
-        tvi.state = INDEXTOOVERLAYMASK(72);
-
-        if (DevProb == CM_PROB_DISABLED)
-        {
-            /* FIXME: set the overlay icon */
-        }
-
+        tvi.state = INDEXTOOVERLAYMASK(OverlayImage);
     }
 
     tvins.item = tvi;
