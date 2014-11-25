@@ -55,18 +55,9 @@ public:
         _In_ LPCGUID ClassGuid,
         _In_ DWORD Index,
         _Out_ LPBOOL MoreItems,
-        _Out_ LPTSTR DeviceName,
+        _Out_writes_(DeviceNameSize)  LPTSTR DeviceName,
         _In_ DWORD DeviceNameSize,
         _Out_ LPTSTR *DeviceId
-        );
-
-    BOOL EnumUnknownDevices(
-        _Out_ LPHANDLE UnknownHandle,
-        _In_ DWORD Index,
-        _Out_ LPBOOL MoreItems,
-        _Out_ LPTSTR DeviceName,
-        _In_ DWORD DeviceNameSize,
-        _Out_ LPTSTR *DeviceID
         );
 
     BOOL GetDeviceStatus(

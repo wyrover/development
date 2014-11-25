@@ -192,9 +192,9 @@ CDeviceView::ListDevicesByType()
                                           &ClassImage,
                                           &IsUnknown,
                                           &IsHidden);
-        if (bSuccess)// &&
-          //  (IsUnknown == FALSE || (IsUnknown && m_ShowUnknown)) &&
-            //(IsHidden == FALSE || (IsHidden && m_ShowHidden)))
+        if (bSuccess &&
+            (IsUnknown == FALSE || (IsUnknown && m_ShowUnknown)) &&
+            (IsHidden == FALSE || (IsHidden && m_ShowHidden)))
         {
             BOOL bDevSuccess;
             HANDLE Handle = NULL;
@@ -257,6 +257,8 @@ CDeviceView::ListDevicesByType()
                                               hDevItem,
                                               TVE_EXPAND);
                     }
+
+                    HeapFree(GetProcessHeap(), 0, DeviceId);
                 }
 
                 DeviceIndex++;

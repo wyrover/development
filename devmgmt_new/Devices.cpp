@@ -223,7 +223,7 @@ CDevices::EnumDevicesForClass(
     SP_DEVINFO_DATA DeviceInfoData;
     DWORD DevIdSize;
     HDEVINFO hDevInfo;
-    BOOL bUnknown, bStatus, bSuccess;
+    BOOL bUnknown, bSuccess;
 
     *MoreItems = FALSE;
     *DeviceName = NULL;
@@ -347,126 +347,6 @@ CDevices::EnumDevicesForClass(
 Quit:
     if (MoreItems == FALSE)
         SetupDiDestroyDeviceInfoList(hDevInfo);
-
-    if (bSuccess == FALSE)
-    {
-        if (*DeviceId)
-        {
-            HeapFree(GetProcessHeap(), 0, *DeviceId);
-            *DeviceId = NULL;
-        }
-    }
-
-    return bSuccess;
-}
-
-BOOL
-CDevices::EnumUnknownDevices(
-    _Inout_opt_ LPHANDLE UnknownHandle,
-    _In_ DWORD Index,
-    _Out_ LPBOOL MoreItems,
-    _Out_ LPTSTR DeviceName,
-    _In_ DWORD DeviceNameSize,
-    _Out_ LPTSTR *DeviceId
-)
-{
-    SP_DEVINFO_DATA DeviceInfoData;
-    DWORD DevIdSize;
-    HDEVINFO hDevInfo;
-    BOOL bSuccess;
-
-    *MoreItems = FALSE;
-    *DeviceName = _T('\0');
-    *DeviceId = NULL;
-
-
-
-
-    if (*UnknownHandle == NULL)
-    {
-        /* Get device info for all devices of a particular class */
-        hDevInfo = SetupDiGetClassDevsW(NULL,
-                                        NULL,
-                                        NULL,
-                                        DIGCF_ALLCLASSES);
-        if (hDevInfo == INVALID_HANDLE_VALUE)
-            return FALSE;
-
-        *UnknownHandle = (HANDLE)hDevInfo;
-    }
-    else
-    {
-        hDevInfo = (HDEVINFO)*UnknownHandle;
-    }
-
-
-
-    /* Setup a device into struct */
-    ZeroMemory(&DeviceInfoData, sizeof(SP_DEVINFO_DATA));
-    DeviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
-
-
-    /* Get the device info for this device in the class */
-    bSuccess = SetupDiEnumDeviceInfo(hDevInfo,
-                                     Index,
-                                     &DeviceInfoData);
-    if (bSuccess == FALSE) goto Quit;
-
-
-    /* We found a device, let the caller know there may be more */
-    *MoreItems = TRUE;
-
-    /* Check if this is a device without a guid */
-    if (IsEqualGUID(DeviceInfoData.ClassGuid, GUID_NULL) == FALSE)
-    {
-        return FALSE;
-    }
-
-    /* Get the size required to hold the device id */
-    bSuccess = SetupDiGetDeviceInstanceIdW(hDevInfo,
-                                           &DeviceInfoData,
-                                           NULL,
-                                           0,
-                                           &DevIdSize);
-    if (bSuccess == FALSE && (GetLastError() != ERROR_INSUFFICIENT_BUFFER))
-        goto Quit;
-
-    /* Allocate some heap to hold the device string */
-    *DeviceId = (LPTSTR)HeapAlloc(GetProcessHeap(),
-                                  0,
-                                  DevIdSize * sizeof(WCHAR));
-    if (*DeviceId == NULL) goto Quit;
-
-    /* Now get the device id string */
-    bSuccess = SetupDiGetDeviceInstanceIdW(hDevInfo,
-                                           &DeviceInfoData,
-                                           *DeviceId,
-                                           DevIdSize,
-                                           NULL);
-    if (bSuccess == FALSE) goto Quit;
-
-    /* Get the device's friendly name */
-    bSuccess = SetupDiGetDeviceRegistryPropertyW(hDevInfo,
-                                                 &DeviceInfoData,
-                                                 SPDRP_FRIENDLYNAME,
-                                                 0,
-                                                 (BYTE*)DeviceName,
-                                                 256,
-                                                 NULL);
-    if (bSuccess == FALSE)
-    {
-        /* if the friendly name fails, try the description instead */
-        bSuccess = SetupDiGetDeviceRegistryPropertyW(hDevInfo,
-                                                     &DeviceInfoData,
-                                                     SPDRP_DEVICEDESC,
-                                                     0,
-                                                     (BYTE*)DeviceName,
-                                                     256,
-                                                     NULL);
-    }
-
-Quit:
-    SetupDiDestroyDeviceInfoList(hDevInfo);
 
     if (bSuccess == FALSE)
     {
