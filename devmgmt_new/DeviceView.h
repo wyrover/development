@@ -69,11 +69,9 @@ private:
     BOOL ListDevicesByType(
         );
 
-    HTREEITEM AddDeviceToTree(
-        _In_ HWND hTreeView,
-        _In_ HTREEITEM hRoot,
-        _In_ DEVINST dnDevInst,
-        _In_ BOOL bShowHidden
+    VOID RecurseChildDevices(
+        _In_ DEVINST ParentDevice,
+        _In_ HTREEITEM hParentTreeItem
         );
 
     HTREEITEM InsertIntoTreeView(

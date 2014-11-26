@@ -44,6 +44,5 @@ public:
     INT Run();
     VOID Uninitialize();
 
-
 };
 

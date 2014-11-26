@@ -38,6 +38,16 @@ public:
         _Out_ PDEVINST DevInst
         );
 
+    BOOL GetDevice(
+        _In_ DEVINST Device,
+        _Out_writes_(DeviceNameSize) LPTSTR DeviceName,
+        _In_ DWORD DeviceNameSize,
+        _Out_ LPTSTR *DeviceId,
+        _Out_ PINT ClassImage,
+        _Out_ LPBOOL IsUnknown,
+        _Out_ LPBOOL IsHidden
+        );
+
     BOOL EnumClasses(
         _In_ ULONG ClassIndex,
         _Out_writes_bytes_(sizeof(GUID)) LPGUID ClassGuid,
@@ -68,6 +78,7 @@ public:
   
 
     HIMAGELIST GetImageList() { return m_ImageListData.ImageList; }
+    DEVINST GetRootDevice() { return m_RootDevInst; }
 
 private:
     BOOL CreateImageList(
@@ -76,9 +87,12 @@ private:
     BOOL CreateRootDevice(
         );
 
+
     DWORD ConvertResourceDescriptorToString(
         _Inout_z_ LPWSTR ResourceDescriptor,
         _In_ DWORD ResourceDescriptorSize
         );
+
+
 };
 

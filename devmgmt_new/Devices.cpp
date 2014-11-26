@@ -3,11 +3,11 @@
 * LICENSE:     GPL - See COPYING in the top level directory
 * FILE:        base/applications/mscutils/devmgmt/devices.cpp
 * PURPOSE:     Wrapper around setupapi functions
-* COPYRIGHT:   Copyright 2006 Ged Murphy <gedmurphy@gmail.com>
+* COPYRIGHT:   Copyright 2014 Ged Murphy <gedmurphy@gmail.com>
 *
 */
 
-#include "StdAfx.h"
+#include "stdafx.h"
 #include "devmgmt.h"
 #include "Devices.h"
 
@@ -129,6 +129,108 @@ CDevices::GetDeviceStatus(
 }
 
 BOOL
+CDevices::GetDevice(
+    _In_ DEVINST Device,
+    _Out_writes_(DeviceNameSize) LPWSTR DeviceName,
+    _In_ DWORD DeviceNameSize,
+    _Out_ LPWSTR *DeviceId,
+    _Out_ PINT ClassImage,
+    _Out_ LPBOOL IsUnknown,
+    _Out_ LPBOOL IsHidden
+    )
+{
+    WCHAR ClassGuidString[MAX_GUID_STRING_LEN];
+    GUID ClassGuid;
+    ULONG ulLength;
+    CONFIGRET cr;
+
+    *DeviceId = NULL;
+
+    cr = CM_Get_Device_ID_Size(&ulLength, Device, 0);
+    if (cr == CR_SUCCESS)
+    {
+        *DeviceId = (LPWSTR)HeapAlloc(GetProcessHeap(),
+                                      0,
+                                      (ulLength + 1) * sizeof(WCHAR));
+        if (*DeviceId)
+        {
+            cr = CM_Get_Device_IDW(Device,
+                                   *DeviceId,
+                                   ulLength + 1,
+                                   0);
+            if (cr != CR_SUCCESS)
+            {
+                HeapFree(GetProcessHeap(), 0, *DeviceId);
+                *DeviceId = NULL;
+            }
+        }
+    }
+
+    if (*DeviceId == NULL)
+        return FALSE;
+
+
+    /* Get the class guid for this device */
+    ulLength = MAX_GUID_STRING_LEN * sizeof(WCHAR);
+    cr = CM_Get_DevNode_Registry_PropertyW(Device,
+                                           CM_DRP_CLASSGUID,
+                                           NULL,
+                                           ClassGuidString,
+                                           &ulLength,
+                                           0);
+    if (cr == CR_SUCCESS)
+    {
+        CLSIDFromString(ClassGuidString, &ClassGuid);
+
+        if ((IsEqualGUID(ClassGuid, GUID_DEVCLASS_LEGACYDRIVER) ||
+            IsEqualGUID(ClassGuid, GUID_DEVCLASS_VOLUME)))
+        {
+            *IsHidden = TRUE;
+        }
+    }
+    else
+    {
+        /* It's a device with no driver */
+        ClassGuid = GUID_DEVCLASS_UNKNOWN;
+        *IsUnknown = TRUE;
+    }
+
+
+    SetupDiGetClassImageIndex(&m_ImageListData,
+                              &ClassGuid,
+                              ClassImage);
+
+    
+
+    ulLength = DeviceNameSize * sizeof(WCHAR);
+    cr = CM_Get_DevNode_Registry_PropertyW(Device,
+                                          CM_DRP_FRIENDLYNAME,
+                                          NULL,
+                                          DeviceName,
+                                          &ulLength,
+                                          0);
+    if (cr != CR_SUCCESS)
+    {
+        ulLength = DeviceNameSize * sizeof(WCHAR);
+        cr = CM_Get_DevNode_Registry_PropertyW(Device,
+                                              CM_DRP_DEVICEDESC,
+                                              NULL,
+                                              DeviceName,
+                                              &ulLength,
+                                              0);
+
+    }
+
+    if (cr != CR_SUCCESS)
+    {
+        HeapFree(GetProcessHeap(), 0, *DeviceId);
+        *DeviceId = NULL;
+    }
+
+    return (cr == CR_SUCCESS ? TRUE : FALSE);
+}
+
+BOOL
 CDevices::EnumClasses(
     _In_ ULONG ClassIndex,
     _Out_writes_bytes_(sizeof(GUID)) LPGUID ClassGuid,
@@ -176,7 +278,7 @@ CDevices::EnumClasses(
         Size = ClassDescSize;
         Type = REG_SZ;
 
-        /* Lookup the class description */
+        /* Lookup the class description (win7+) */
         Success = RegQueryValueExW(hKey,
                                    L"ClassDesc",
                                    NULL,
@@ -191,6 +293,16 @@ CDevices::EnumClasses(
                 /* The description is located in a module resource */
                 Success = ConvertResourceDescriptorToString(ClassDesc, ClassDescSize);
             }
+        }
+        else if (Success == ERROR_FILE_NOT_FOUND)
+        {
+            /* WinXP stores the description in the default value */
+            Success = RegQueryValueExW(hKey,
+                                       NULL,
+                                       NULL,
+                                       &Type,
+                                       (LPBYTE)ClassDesc,
+                                       &Size);
         }
 
         /* Close the registry key */
@@ -334,6 +446,15 @@ CDevices::EnumDevicesForClass(
                                            DevIdSize,
                                            NULL);
     if (bSuccess == FALSE) goto Quit;
+
+
+    /* Skip the root device */
+    if (*DeviceId != NULL &&
+        wcscmp(*DeviceId, L"HTREE\\ROOT\\0") == 0)
+    {
+        bSuccess = FALSE;
+        goto Quit;
+    }
 
     /* Get the device's friendly name */
     bSuccess = SetupDiGetDeviceRegistryPropertyW(hDevInfo,
@@ -493,3 +614,5 @@ CDevices::ConvertResourceDescriptorToString(
 
     return dwError;
 }
+
+

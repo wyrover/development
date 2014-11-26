@@ -1,6 +1,16 @@
-#include "StdAfx.h"
+/*
+* PROJECT:     ReactOS Device Manager
+* LICENSE:     GPL - See COPYING in the top level directory
+* FILE:        base/applications/mscutils/devmgmt/deviceview.cpp
+* PURPOSE:     Implements main window
+* COPYRIGHT:   Copyright 2014 Ged Murphy <gedmurphy@gmail.com>
+*
+*/
+
+#include "stdafx.h"
 #include "devmgmt.h"
 #include "MainWindow.h"
+
 
 /* DATA *****************************************************/
 
@@ -462,13 +472,45 @@ CMainWindow::OnCommand(WPARAM wParam,
         }
         break;
 
+        case IDC_SHOWHIDDEN:
+        {
+            UINT CurCheckState, NewCheckState;
+            
+            /* Get the current state */
+            CurCheckState = GetMenuState(m_hMenu, IDC_SHOWHIDDEN, MF_BYCOMMAND);
+
+            /* Inform the device view of the change */
+            if (CurCheckState == MF_CHECKED)
+            {
+                NewCheckState = MF_UNCHECKED;
+                m_DeviceView->ShowHiddenDevices(FALSE);
+            }
+            else if (CurCheckState == MF_UNCHECKED)
+            {
+                NewCheckState = MF_CHECKED;
+                m_DeviceView->ShowHiddenDevices(TRUE);
+            }
+            else
+            {
+                ATLASSERT(FALSE);
+                break;
+            }
+
+            /* Set the new check state */
+            CheckMenuItem(m_hMenu, IDC_SHOWHIDDEN, MF_BYCOMMAND | NewCheckState);
+
+            /* Refresh the device view */
+            m_DeviceView->Refresh();
+            break;
+        }
+
         case IDC_ABOUT:
         {
-            /* Blow my own trumpet */
+            /* Apportion blame */
             MessageBoxW(m_hMainWnd,
-                        L"ReactOS Device Manager\r\nCopyright Ged Murphy 2011",
+                        L"ReactOS Device Manager\r\nCopyright Ged Murphy 2014",
                         L"About",
-                        MB_OK);
+                        MB_OK | MB_APPLMODAL);
 
             /* Set focus back to the treeview */
             m_DeviceView->SetFocus();
